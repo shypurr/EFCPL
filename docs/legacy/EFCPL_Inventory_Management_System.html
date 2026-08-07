@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EFCPL — Inventory Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0A1628;--navy2:#0F1E35;--navy3:#162440;--navy4:#1E2F4A;
+  --teal:#1D9E75;--teal2:#0F6E56;--teal3:#E1F5EE;
+  --amber:#F59E0B;--amber2:#FEF3C7;
+  --red:#EF4444;--red2:#FEE2E2;
+  --blue:#3B82F6;--blue2:#EFF6FF;
+  --text:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --border:#E2E8F0;--border2:#CBD5E1;
+  --bg:#F8FAFC;--white:#FFFFFF;
+  --radius:8px;--radius2:12px;
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow2:0 4px 16px rgba(0,0,0,0.12);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
+/* SIDEBAR */
+#sidebar{width:220px;background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--navy4)}
+.sb-logo .logo-text{font-size:18px;font-weight:600;color:#fff;letter-spacing:-.3px}
+.sb-logo .logo-sub{font-size:10px;color:#64748B;margin-top:2px;font-family:'DM Mono',monospace;letter-spacing:.05em}
+.sb-section{padding:14px 10px 4px;font-size:9px;font-weight:600;color:#475569;letter-spacing:.1em;text-transform:uppercase}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:6px;cursor:pointer;color:#94A3B8;font-size:13px;font-weight:400;transition:all .15s}
+.sb-item:hover{background:var(--navy3);color:#CBD5E1}
+.sb-item.active{background:var(--teal);color:#fff;font-weight:500}
+.sb-item .icon{width:16px;text-align:center;font-size:14px;flex-shrink:0}
+.sb-footer{margin-top:auto;padding:14px 16px;border-top:1px solid var(--navy4);font-size:11px;color:#475569}
+/* MAIN */
+#main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+#topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:16px;font-weight:600;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.alert-badge{background:var(--red);color:#fff;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer}
+.company-tag{font-size:11px;color:var(--text3);background:var(--bg);padding:4px 10px;border-radius:99px;border:1px solid var(--border);font-family:'DM Mono',monospace}
+#content{padding:24px 28px;flex:1}
+/* PANELS */
+.panel{display:none}.panel.active{display:block}
+/* PAGE HEADER */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:20px;font-weight:600}
+.page-sub{font-size:13px;color:var(--text2);margin-top:2px}
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius2);padding:16px 18px}
+.stat-label{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.stat-value{font-size:24px;font-weight:600;font-family:'DM Mono',monospace;line-height:1}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:4px}
+.stat-card.teal{border-top:3px solid var(--teal)}
+.stat-card.amber{border-top:3px solid var(--amber)}
+.stat-card.red{border-top:3px solid var(--red)}
+.stat-card.blue{border-top:3px solid var(--blue)}
+/* TABLE */
+.table-wrap{background:var(--white);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden}
+.table-toolbar{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.table-toolbar-title{font-size:14px;font-weight:600}
+.table-actions{display:flex;gap:8px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--bg);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFBFC}
+.mono{font-family:'DM Mono',monospace;font-size:12px}
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-green{background:#D1FAE5;color:#065F46}
+.badge-red{background:var(--red2);color:#991B1B}
+.badge-amber{background:var(--amber2);color:#92400E}
+.badge-blue{background:var(--blue2);color:#1E40AF}
+.badge-gray{background:#F1F5F9;color:#475569}
+.badge-teal{background:var(--teal3);color:var(--teal2)}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--teal);color:#fff}.btn-primary:hover{background:var(--teal2)}
+.btn-outline{background:var(--white);color:var(--text);border:1px solid var(--border2)}.btn-outline:hover{background:var(--bg)}
+.btn-danger{background:var(--red2);color:#991B1B;border:1px solid #FECACA}.btn-danger:hover{background:#FEE2E2}
+.btn-amber{background:var(--amber2);color:#92400E;border:1px solid #FDE68A}.btn-amber:hover{background:#FEF9C3}
+.btn-sm{padding:5px 11px;font-size:12px}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius2);width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow2)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{cursor:pointer;color:var(--text3);font-size:20px;line-height:1;padding:4px;border-radius:4px}.modal-close:hover{color:var(--text);background:var(--bg)}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row.single{grid-template-columns:1fr}
+.form-row.triple{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+label{font-size:12px;font-weight:500;color:var(--text2)}
+input,select,textarea{padding:8px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--white);transition:border-color .15s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(29,158,117,.1)}
+textarea{resize:vertical;min-height:72px}
+/* ALERT CARDS */
+.alerts-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.alert-card{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:var(--radius);border-left:3px solid}
+.alert-card.critical{background:#FFF1F2;border-color:var(--red)}
+.alert-card.warning{background:#FFFBEB;border-color:var(--amber)}
+.alert-card.info{background:var(--blue2);border-color:var(--blue)}
+.alert-icon{font-size:16px;margin-top:1px}
+.alert-title{font-size:13px;font-weight:600}
+.alert-desc{font-size:12px;color:var(--text2);margin-top:2px}
+/* TABS */
+.tabs{display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:18px}
+.tab{padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+/* MISC */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text3)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+.empty-state .empty-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.search-input{padding:7px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;width:220px;outline:none}
+.search-input:focus{border-color:var(--teal)}
+.section-divider{height:1px;background:var(--border);margin:20px 0}
+.info-box{background:var(--teal3);border:1px solid #9FE1CB;border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--teal2);margin-bottom:18px}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:3px;transition:width .3s}
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:11px;font-family:'DM Mono',monospace;background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="logo-text">EFCPL</div>
+    <div class="logo-sub">INVENTORY MANAGEMENT SYSTEM</div>
+  </div>
+  <div class="sb-section">Overview</div>
+  <div class="sb-item active" onclick="showPanel('dashboard')"><span class="icon">📊</span> Dashboard</div>
+  <div class="sb-item" onclick="showPanel('alerts-panel')"><span class="icon">🔔</span> Alerts <span id="alert-count-badge" style="margin-left:auto;background:#EF4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px;font-weight:600">0</span></div>
+  <div class="sb-section">Inventory</div>
+  <div class="sb-item" onclick="showPanel('raw-materials')"><span class="icon">🌾</span> Raw Materials</div>
+  <div class="sb-item" onclick="showPanel('finished-goods')"><span class="icon">📦</span> Finished Goods</div>
+  <div class="sb-item" onclick="showPanel('packaging')"><span class="icon">🏷️</span> Packaging</div>
+  <div class="sb-section">Operations</div>
+  <div class="sb-item" onclick="showPanel('movements')"><span class="icon">🔄</span> GRN / Issues</div>
+  <div class="sb-item" onclick="showPanel('purchase-orders')"><span class="icon">🛒</span> Purchase Orders</div>
+  <div class="sb-section">Reports</div>
+  <div class="sb-item" onclick="showPanel('reports')"><span class="icon">📋</span> Reports</div>
+  <div class="sb-footer">v1.0 &nbsp;·&nbsp; EFCPL IMS<br>Data stored locally on this PC</div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-right">
+      <span class="alert-badge" onclick="showPanel('alerts-panel')" id="alert-topbadge">0 Alerts</span>
+      <span class="company-tag">EFCPL · Pune</span>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="dashboard" class="panel active">
+      <div class="page-header">
+        <div><div class="page-title">Good day, EFCPL! 👋</div><div class="page-sub" id="dash-date"></div></div>
+        <button class="btn btn-outline btn-sm" onclick="refreshDashboard()">⟳ Refresh</button>
+      </div>
+      <div class="stats-row" id="dash-stats"></div>
+      <div id="dash-alerts-section"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="table-wrap">
+          <div class="table-toolbar"><span class="table-toolbar-title">⚠️ Low Stock — Raw Materials</span></div>
+          <table><thead><tr><th>Material</th><th>Stock</th><th>Reorder Level</th><th>Status</th></tr></thead>
+          <tbody id="dash-rm-low"></tbody></table>
+        </div>
+        <div class="table-wrap">
+          <div class="table-toolbar"><span class="table-toolbar-title">📦 Near-Expiry — Finished Goods</span></div>
+          <table><thead><tr><th>Product</th><th>Batch</th><th>Expiry</th><th>Days Left</th></tr></thead>
+          <tbody id="dash-fg-expiry"></tbody></table>
+        </div>
+      </div>
+      <div style="margin-top:16px" class="table-wrap">
+        <div class="table-toolbar"><span class="table-toolbar-title">🕐 Recent Movements (Last 10)</span></div>
+        <table><thead><tr><th>Date</th><th>Type</th><th>Material / Product</th><th>Qty</th><th>Party / Dept</th><th>Ref No.</th></tr></thead>
+        <tbody id="dash-movements"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ===== ALERTS ===== -->
+    <div id="alerts-panel" class="panel">
+      <div class="page-header"><div><div class="page-title">🔔 Alerts & Notifications</div><div class="page-sub">Active alerts requiring attention</div></div></div>
+      <div id="all-alerts-container"></div>
+    </div>
+
+    <!-- ===== RAW MATERIALS ===== -->
+    <div id="raw-materials" class="panel">
+      <div class="page-header">
+        <div><div class="page-title">🌾 Raw Materials</div><div class="page-sub">Stock tracking, GRN, reorder management</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="openModal('grn-modal')">+ GRN Entry</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('rm-modal')">+ Add Material</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input class="search-input" placeholder="Search material..." oninput="filterTable('rm-table',this.value)" />
+        <select onchange="filterRMStatus(this.value)" style="padding:7px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px">
+          <option value="">All Status</option>
+          <option value="Low Stock">Low Stock</option>
+          <option value="OK">OK</option>
+          <option value="Overstocked">Overstocked</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Code</th><th>Material Name</th><th>Grade</th><th>Stock (Qty)</th><th>Unit</th><th>Reorder Level</th><th>Max Stock</th><th>Supplier</th><th>Location</th><th>Expiry</th><th>CoA</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="rm-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ===== FINISHED GOODS ===== -->
+    <div id="finished-goods" class="panel">
+      <div class="page-header">
+        <div><div class="page-title">📦 Finished Goods</div><div class="page-sub">Production batches, dispatch, stock aging</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="openModal('dispatch-modal')">↑ Dispatch</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('fg-modal')">+ Add Product</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input class="search-input" placeholder="Search product / SKU..." oninput="filterTable('fg-table',this.value)" />
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>SKU</th><th>Product Name</th><th>Batch</th><th>Produced</th><th>Dispatched</th><th>In Stock</th><th>Unit</th><th>Reserved</th><th>Free Stock</th><th>Mfg Date</th><th>Expiry</th><th>Days Left</th><th>Location</th><th>Actions</th></tr></thead>
+        <tbody id="fg-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ===== PACKAGING ===== -->
+    <div id="packaging" class="panel">
+      <div class="page-header">
+        <div><div class="page-title">🏷️ Packaging Materials</div><div class="page-sub">Cartons, labels, pouches, bottles, shrink wrap</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('pm-modal')">+ Add Packaging</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input class="search-input" placeholder="Search packaging..." oninput="filterTable('pm-table',this.value)" />
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Code</th><th>Type</th><th>Description</th><th>Specification</th><th>Stock</th><th>Unit</th><th>Linked SKU</th><th>Supplier</th><th>MOQ</th><th>Last Rate (₹)</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="pm-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ===== MOVEMENTS ===== -->
+    <div id="movements" class="panel">
+      <div class="page-header">
+        <div><div class="page-title">🔄 GRN & Material Issues</div><div class="page-sub">All inward and outward material movements</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="openModal('issue-modal')">↓ Issue Material</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('grn-modal')">+ New GRN</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'mv-grn')">GRN (Inward)</div>
+        <div class="tab" onclick="switchTab(this,'mv-issue')">Material Issues (Outward)</div>
+      </div>
+      <div id="mv-grn" class="tab-panel active">
+        <div class="table-wrap"><table><thead><tr><th>GRN No.</th><th>Date</th><th>Category</th><th>Material / Product</th><th>Qty</th><th>Unit</th><th>Supplier / Source</th><th>Batch No.</th><th>Invoice No.</th><th>CoA</th><th>Entered By</th></tr></thead>
+        <tbody id="grn-table"></tbody></table></div>
+      </div>
+      <div id="mv-issue" class="tab-panel">
+        <div class="table-wrap"><table><thead><tr><th>MIS No.</th><th>Date</th><th>Category</th><th>Material / Product</th><th>Qty</th><th>Unit</th><th>Issued To / Dept</th><th>Issued By</th><th>Remarks</th></tr></thead>
+        <tbody id="issue-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ===== PURCHASE ORDERS ===== -->
+    <div id="purchase-orders" class="panel">
+      <div class="page-header">
+        <div><div class="page-title">🛒 Purchase Order Suggestions</div><div class="page-sub">Auto-generated based on reorder levels</div></div>
+        <button class="btn btn-primary btn-sm" onclick="generatePOSuggestions()">⟳ Refresh Suggestions</button>
+      </div>
+      <div class="info-box" id="po-info-box">Click "Refresh Suggestions" to generate PO recommendations based on current stock vs. reorder levels.</div>
+      <div id="po-suggestions"></div>
+    </div>
+
+    <!-- ===== REPORTS ===== -->
+    <div id="reports" class="panel">
+      <div class="page-header"><div><div class="page-title">📋 Reports</div><div class="page-sub">Inventory analytics and summaries</div></div></div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'rpt-summary')">Stock Summary</div>
+        <div class="tab" onclick="switchTab(this,'rpt-valuation')">Valuation</div>
+        <div class="tab" onclick="switchTab(this,'rpt-consumption')">Consumption</div>
+        <div class="tab" onclick="switchTab(this,'rpt-aging')">Aging / Dead Stock</div>
+      </div>
+      <div id="rpt-summary" class="tab-panel active"><div id="report-summary-content"></div></div>
+      <div id="rpt-valuation" class="tab-panel"><div id="report-valuation-content"></div></div>
+      <div id="rpt-consumption" class="tab-panel"><div id="report-consumption-content"></div></div>
+      <div id="rpt-aging" class="tab-panel"><div id="report-aging-content"></div></div>
+    </div>
+
+  </div><!-- end content -->
+</div><!-- end main -->
+
+<!-- ===== MODALS ===== -->
+
+<!-- ADD RAW MATERIAL -->
+<div class="modal-overlay" id="rm-modal">
+<div class="modal">
+  <div class="modal-header"><span class="modal-title">Add Raw Material</span><span class="modal-close" onclick="closeModal('rm-modal')">✕</span></div>
+  <div class="modal-body">
+    <div class="form-row triple"><div class="form-group"><label>Material Code *</label><input id="rm-code" placeholder="RM-001"></div><div class="form-group"><label>Material Name *</label><input id="rm-name" placeholder="Maida (All Purpose Flour)"></div><div class="form-group"><label>Grade / Spec</label><input id="rm-grade" placeholder="Food Grade A1"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Current Qty *</label><input id="rm-qty" type="number" placeholder="0"></div><div class="form-group"><label>Unit *</label><select id="rm-unit"><option>KG</option><option>LTR</option><option>MT</option><option>Units</option><option>Boxes</option><option>Rolls</option></select></div><div class="form-group"><label>Storage Zone / Bin</label><input id="rm-zone" placeholder="Zone A / Bin 3"></div></div>
+    <div class="form-row"><div class="form-group"><label>Reorder Level *</label><input id="rm-reorder" type="number" placeholder="50"></div><div class="form-group"><label>Maximum Stock Level</label><input id="rm-maxstock" type="number" placeholder="500"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Supplier Name</label><input id="rm-supplier" placeholder="ABC Traders"></div><div class="form-group"><label>Lead Time (Days)</label><input id="rm-leadtime" type="number" placeholder="7"></div><div class="form-group"><label>Last Purchase Rate (₹/unit)</label><input id="rm-rate" type="number" placeholder="45"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Last Received Date</label><input id="rm-received" type="date"></div><div class="form-group"><label>Batch Number</label><input id="rm-batch" placeholder="B2025-001"></div><div class="form-group"><label>CoA Status</label><select id="rm-coa"><option>Approved</option><option>Pending</option><option>Rejected</option><option>N/A</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Expiry Date</label><input id="rm-expiry" type="date"></div><div class="form-group"><label>Remarks</label><input id="rm-remarks" placeholder="Optional notes"></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('rm-modal')">Cancel</button><button class="btn btn-primary" onclick="saveRM()">Save Material</button></div>
+</div></div>
+
+<!-- ADD FINISHED GOOD -->
+<div class="modal-overlay" id="fg-modal">
+<div class="modal">
+  <div class="modal-header"><span class="modal-title">Add Finished Good</span><span class="modal-close" onclick="closeModal('fg-modal')">✕</span></div>
+  <div class="modal-body">
+    <div class="form-row triple"><div class="form-group"><label>SKU Code *</label><input id="fg-sku" placeholder="FG-001"></div><div class="form-group"><label>Product Name *</label><input id="fg-name" placeholder="Paneer Butter Masala 400g"></div><div class="form-group"><label>Batch Number *</label><input id="fg-batch" placeholder="FGB-2025-001"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Qty Produced *</label><input id="fg-produced" type="number" placeholder="0"></div><div class="form-group"><label>Qty Dispatched</label><input id="fg-dispatched" type="number" placeholder="0"></div><div class="form-group"><label>Unit</label><select id="fg-unit"><option>Units</option><option>KG</option><option>Cartons</option><option>MT</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Reserved Qty (for orders)</label><input id="fg-reserved" type="number" placeholder="0"></div><div class="form-group"><label>Sales Order Ref</label><input id="fg-soref" placeholder="SO-2025-001"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Manufacturing Date *</label><input id="fg-mfgdate" type="date"></div><div class="form-group"><label>Expiry Date *</label><input id="fg-expiry" type="date"></div><div class="form-group"><label>Shelf Life (Days)</label><input id="fg-shelflife" type="number" placeholder="180"></div></div>
+    <div class="form-row"><div class="form-group"><label>Storage Location</label><input id="fg-location" placeholder="Cold Store Room 1"></div><div class="form-group"><label>Temperature Condition</label><select id="fg-temp"><option>-18°C (Deep Frozen)</option><option>0–4°C (Chilled)</option><option>Ambient</option></select></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('fg-modal')">Cancel</button><button class="btn btn-primary" onclick="saveFG()">Save Product</button></div>
+</div></div>
+
+<!-- ADD PACKAGING -->
+<div class="modal-overlay" id="pm-modal">
+<div class="modal">
+  <div class="modal-header"><span class="modal-title">Add Packaging Material</span><span class="modal-close" onclick="closeModal('pm-modal')">✕</span></div>
+  <div class="modal-body">
+    <div class="form-row triple"><div class="form-group"><label>Item Code *</label><input id="pm-code" placeholder="PKG-001"></div><div class="form-group"><label>Type *</label><select id="pm-type"><option>Carton</option><option>Label</option><option>Pouch</option><option>Bottle</option><option>Cap</option><option>Shrink Wrap</option><option>Box</option><option>Tray</option><option>Other</option></select></div><div class="form-group"><label>Description *</label><input id="pm-desc" placeholder="400g PP Container with Lid"></div></div>
+    <div class="form-row"><div class="form-group"><label>Specification</label><input id="pm-spec" placeholder="Size: 150x100mm, Color: White, Print: EFCPL v3"></div><div class="form-group"><label>Linked SKU</label><input id="pm-linkedsku" placeholder="FG-001, FG-002"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Current Stock *</label><input id="pm-qty" type="number" placeholder="0"></div><div class="form-group"><label>Unit</label><select id="pm-unit"><option>Units</option><option>Rolls</option><option>Boxes</option><option>Sheets</option></select></div><div class="form-group"><label>Reorder Level</label><input id="pm-reorder" type="number" placeholder="500"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Supplier</label><input id="pm-supplier" placeholder="XYZ Packaging Co."></div><div class="form-group"><label>MOQ</label><input id="pm-moq" type="number" placeholder="1000"></div><div class="form-group"><label>Lead Time (Days)</label><input id="pm-leadtime" type="number" placeholder="10"></div></div>
+    <div class="form-row"><div class="form-group"><label>Last Purchase Rate (₹/unit)</label><input id="pm-rate" type="number" placeholder="3.50"></div><div class="form-group"><label>Consumption Rate (per batch)</label><input id="pm-consumption" type="number" placeholder="200"></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('pm-modal')">Cancel</button><button class="btn btn-primary" onclick="savePM()">Save Packaging</button></div>
+</div></div>
+
+<!-- GRN MODAL -->
+<div class="modal-overlay" id="grn-modal">
+<div class="modal">
+  <div class="modal-header"><span class="modal-title">New GRN Entry</span><span class="modal-close" onclick="closeModal('grn-modal')">✕</span></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label>Category *</label><select id="grn-category" onchange="populateGRNDropdown()"><option value="">Select Category</option><option>Raw Material</option><option>Packaging</option></select></div><div class="form-group"><label>Material / Item *</label><select id="grn-item"><option value="">Select category first</option></select></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Received Date *</label><input id="grn-date" type="date"></div><div class="form-group"><label>Qty Received *</label><input id="grn-qty" type="number" placeholder="0"></div><div class="form-group"><label>Unit</label><input id="grn-unit" placeholder="KG"></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Supplier Name *</label><input id="grn-supplier" placeholder="Supplier Name"></div><div class="form-group"><label>Invoice No.</label><input id="grn-invoice" placeholder="INV-2025-001"></div><div class="form-group"><label>Batch No.</label><input id="grn-batch" placeholder="B2025-001"></div></div>
+    <div class="form-row"><div class="form-group"><label>CoA Status</label><select id="grn-coa"><option>Approved</option><option>Pending</option><option>Rejected</option><option>N/A</option></select></div><div class="form-group"><label>Entered By</label><input id="grn-by" placeholder="Store Manager"></div></div>
+    <div class="form-row single"><div class="form-group"><label>Remarks</label><input id="grn-remarks" placeholder="Optional notes"></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('grn-modal')">Cancel</button><button class="btn btn-primary" onclick="saveGRN()">Post GRN</button></div>
+</div></div>
+
+<!-- ISSUE MODAL -->
+<div class="modal-overlay" id="issue-modal">
+<div class="modal">
+  <div class="modal-header"><span class="modal-title">Issue Material to Production</span><span class="modal-close" onclick="closeModal('issue-modal')">✕</span></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label>Category *</label><select id="issue-category" onchange="populateIssueDropdown()"><option value="">Select Category</option><option>Raw Material</option><option>Packaging</option><option>Finished Goods</option></select></div><div class="form-group"><label>Material / Item *</label><select id="issue-item"><option value="">Select category first</option></select></div></div>
+    <div class="form-row triple"><div class="form-group"><label>Issue Date *</label><input id="issue-date" type="date"></div><div class="form-group"><label>Qty to Issue *</label><input id="issue-qty" type="number" placeholder="0"></div><div class="form-group"><label>Unit</label><input id="issue-unit" placeholder="KG"></div></div>
+    <div class="form-row"><div class="form-group"><label>Issued To / Department *</label><input id="issue-to" placeholder="Production Line 1"></div><div class="form-group"><label>Issued By</label><input id="issue-by" placeholder="Store Manager"></div></div>
+    <div class="form-row single"><div class="form-group"><label>Remarks</label><input id="issue-remarks" placeholder="Production order reference, etc."></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('issue-modal')">Cancel</button><button class="btn btn-primary" onclick="saveIssue()">Post Issue</button></div>
+</div></div>
+
+<!-- DISPATCH MODAL -->
+<div class="modal-overlay" id="dispatch-modal">
+<div class="modal">
+  <div class="modal-header"><span class="modal-title">Dispatch Finished Goods</span><span class="modal-close" onclick="closeModal('dispatch-modal')">✕</span></div>
+  <div class="modal-body">
+    <div class="form-row"><div class="form-group"><label>Product *</label><select id="dispatch-item"><option value="">Select product</option></select></div><div class="form-group"><label>Dispatch Date *</label><input id="dispatch-date" type="date"></div></div>
+    <div class="form-row"><div class="form-group"><label>Qty to Dispatch *</label><input id="dispatch-qty" type="number" placeholder="0"></div><div class="form-group"><label>Customer / Party</label><input id="dispatch-customer" placeholder="Customer Name"></div></div>
+    <div class="form-row"><div class="form-group"><label>Sales Order Ref</label><input id="dispatch-soref" placeholder="SO-2025-001"></div><div class="form-group"><label>Dispatched By</label><input id="dispatch-by" placeholder="Warehouse Manager"></div></div>
+    <div class="form-row single"><div class="form-group"><label>Remarks</label><input id="dispatch-remarks" placeholder="Vehicle No., delivery notes, etc."></div></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('dispatch-modal')">Cancel</button><button class="btn btn-primary" onclick="saveDispatch()">Post Dispatch</button></div>
+</div></div>
+
+<!-- DELETE CONFIRM -->
+<div class="modal-overlay" id="delete-modal">
+<div class="modal" style="width:400px">
+  <div class="modal-header"><span class="modal-title">⚠️ Confirm Delete</span><span class="modal-close" onclick="closeModal('delete-modal')">✕</span></div>
+  <div class="modal-body"><p style="font-size:14px;color:var(--text2)">Are you sure you want to delete <strong id="delete-item-name"></strong>? This action cannot be undone.</p></div>
+  <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('delete-modal')">Cancel</button><button class="btn btn-danger" onclick="confirmDelete()">Delete</button></div>
+</div></div>
+
+<script>
+// ========== DATA LAYER ==========
+const DB = {
+  get(key){try{return JSON.parse(localStorage.getItem('efcpl_'+key))||[]}catch{return[]}},
+  set(key,val){localStorage.setItem('efcpl_'+key,JSON.stringify(val))},
+  id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+};
+
+// SEED DEMO DATA
+function seedDemoData(){
+  if(DB.get('seeded').length) return;
+  const today=new Date(),fmt=d=>d.toISOString().split('T')[0];
+  const add=(d,n)=>{let x=new Date(d);x.setDate(x.getDate()+n);return fmt(x)};
+  
+  const rms=[
+    {id:DB.id(),code:'RM-001',name:'Maida (All Purpose Flour)',grade:'Food Grade A1',qty:850,unit:'KG',reorder:200,maxstock:2000,supplier:'Shree Ganesh Traders',leadtime:3,rate:38,received:fmt(today),batch:'B2025-101',coa:'Approved',zone:'Zone A / Bin 1',expiry:add(today,180),remarks:''},
+    {id:DB.id(),code:'RM-002',name:'Refined Oil (Sunflower)',grade:'FSSAI Certified',qty:120,unit:'LTR',reorder:200,maxstock:1000,supplier:'Ruchi Soya Industries',leadtime:5,rate:145,received:add(today,-10),batch:'B2025-102',coa:'Approved',zone:'Zone A / Bin 4',expiry:add(today,365),remarks:''},
+    {id:DB.id(),code:'RM-003',name:'Paneer (Fresh)',grade:'Grade 1',qty:45,unit:'KG',reorder:80,maxstock:300,supplier:'Amul Dairy Pune',leadtime:1,rate:310,received:add(today,-2),batch:'B2025-103',coa:'Approved',zone:'Cold Store / Bin 2',expiry:add(today,7),remarks:'Near expiry — use priority'},
+    {id:DB.id(),code:'RM-004',name:'Tomato Puree',grade:'Commercial Grade',qty:220,unit:'KG',reorder:100,maxstock:600,supplier:'Nijjar Agro Foods',leadtime:4,rate:55,received:add(today,-5),batch:'B2025-104',coa:'Pending',zone:'Zone B / Bin 2',expiry:add(today,90),remarks:''},
+    {id:DB.id(),code:'RM-005',name:'Gram Flour (Besan)',grade:'Fine Ground',qty:180,unit:'KG',reorder:150,maxstock:800,supplier:'Sai Agro Mills',leadtime:3,rate:70,received:add(today,-8),batch:'B2025-105',coa:'Approved',zone:'Zone A / Bin 5',expiry:add(today,120),remarks:''},
+    {id:DB.id(),code:'RM-006',name:'Rock Salt',grade:'Food Grade',qty:95,unit:'KG',reorder:100,maxstock:500,supplier:'Tata Chemicals',leadtime:7,rate:22,received:add(today,-15),batch:'B2025-106',coa:'Approved',zone:'Zone C / Bin 1',expiry:add(today,730),remarks:''},
+    {id:DB.id(),code:'RM-007',name:'Mustard Seeds',grade:'Grade 1',qty:38,unit:'KG',reorder:50,maxstock:200,supplier:'Shri Balaji Spices',leadtime:4,rate:95,received:add(today,-12),batch:'B2025-107',coa:'Approved',zone:'Zone B / Bin 5',expiry:add(today,365),remarks:'Low stock'},
+    {id:DB.id(),code:'RM-008',name:'Sabudana (Tapioca)',grade:'Export Quality',qty:310,unit:'KG',reorder:100,maxstock:600,supplier:'Mahesh Starch Products',leadtime:5,rate:120,received:add(today,-3),batch:'B2025-108',coa:'Approved',zone:'Zone A / Bin 8',expiry:add(today,180),remarks:''},
+  ];
+  
+  const fgs=[
+    {id:DB.id(),sku:'FG-001',name:'Paneer Butter Masala 400g',batch:'FGB-2025-001',produced:500,dispatched:320,unit:'Units',reserved:80,soref:'SO-2025-011',mfgdate:add(today,-30),expiry:add(today,150),shelflife:180,location:'Cold Store 1',temp:'-18°C (Deep Frozen)'},
+    {id:DB.id(),sku:'FG-002',name:'Veg Biryani 400g',batch:'FGB-2025-002',produced:300,dispatched:200,unit:'Units',reserved:50,soref:'SO-2025-012',mfgdate:add(today,-20),expiry:add(today,160),shelflife:180,location:'Cold Store 1',temp:'-18°C (Deep Frozen)'},
+    {id:DB.id(),sku:'FG-003',name:'Sabudana Vada 200g',batch:'FGB-2025-003',produced:800,dispatched:650,unit:'Units',reserved:100,soref:'SO-2025-013',mfgdate:add(today,-45),expiry:add(today,25),shelflife:90,location:'Cold Store 2',temp:'-18°C (Deep Frozen)'},
+    {id:DB.id(),sku:'FG-004',name:'Misal Pav Kit 500g',batch:'FGB-2025-004',produced:200,dispatched:80,unit:'Units',reserved:30,soref:'',mfgdate:add(today,-10),expiry:add(today,170),shelflife:180,location:'Cold Store 1',temp:'-18°C (Deep Frozen)'},
+    {id:DB.id(),sku:'FG-005',name:'Gajar Halwa 400g',batch:'FGB-2025-005',produced:400,dispatched:400,unit:'Units',reserved:0,soref:'',mfgdate:add(today,-60),expiry:add(today,12),shelflife:90,location:'Cold Store 2',temp:'-18°C (Deep Frozen)'},
+    {id:DB.id(),sku:'FG-006',name:'Garlic Naan (6 pack)',batch:'FGB-2025-006',produced:600,dispatched:250,unit:'Units',reserved:100,soref:'SO-2025-014',mfgdate:add(today,-15),expiry:add(today,165),shelflife:180,location:'Cold Store 1',temp:'-18°C (Deep Frozen)'},
+  ];
+  
+  const pms=[
+    {id:DB.id(),code:'PKG-001',type:'Pouch',desc:'400g PP Microwavable Container',spec:'150x100mm, Clear PP, Lids included',qty:1200,unit:'Units',linkedsku:'FG-001,FG-002',supplier:'Avon Plastics Pune',moq:2000,leadtime:10,rate:4.5,reorder:500,consumption:200},
+    {id:DB.id(),code:'PKG-002',type:'Label',desc:'Product Label EFCPL v4',spec:'100x60mm, 4-colour offset, Food safe ink',qty:3500,unit:'Units',linkedsku:'FG-001,FG-003,FG-004',supplier:'Shri Print House',moq:5000,leadtime:7,rate:0.8,reorder:1000,consumption:500},
+    {id:DB.id(),code:'PKG-003',type:'Carton',desc:'Master Carton 12-Unit',spec:'5-ply corrugated, 400x300x200mm, Brown',qty:280,unit:'Units',linkedsku:'All SKUs',supplier:'Vijay Packaging',moq:500,leadtime:5,rate:28,reorder:200,consumption:50},
+    {id:DB.id(),code:'PKG-004',type:'Shrink Wrap',desc:'POF Shrink Film Roll',spec:'30 micron, 400mm width, Clear',qty:4,unit:'Rolls',linkedsku:'All SKUs',supplier:'Supreme Polyfilm',moq:10,leadtime:7,rate:1800,reorder:5,consumption:1},
+    {id:DB.id(),code:'PKG-005',type:'Label',desc:'Batch/MFG Sticker (Thermal)',spec:'50x25mm thermal roll, 1000 stickers/roll',qty:12,unit:'Rolls',linkedsku:'All SKUs',supplier:'Barcode Solutions India',moq:20,leadtime:3,rate:250,reorder:10,consumption:2},
+  ];
+
+  const grns=[
+    {id:DB.id(),grnno:'GRN-001',date:add(today,-10),category:'Raw Material',item:'Maida (All Purpose Flour)',qty:500,unit:'KG',supplier:'Shree Ganesh Traders',invoice:'INV-2025-201',batch:'B2025-101',coa:'Approved',by:'Ramesh Patil'},
+    {id:DB.id(),grnno:'GRN-002',date:add(today,-8),category:'Raw Material',item:'Paneer (Fresh)',qty:100,unit:'KG',supplier:'Amul Dairy Pune',invoice:'INV-2025-202',batch:'B2025-103',coa:'Approved',by:'Ramesh Patil'},
+    {id:DB.id(),grnno:'GRN-003',date:add(today,-5),category:'Packaging',item:'400g PP Microwavable Container',qty:2000,unit:'Units',supplier:'Avon Plastics Pune',invoice:'INV-2025-203',batch:'PKG-2025-01',coa:'N/A',by:'Suresh Kumar'},
+  ];
+
+  const issues=[
+    {id:DB.id(),misno:'MIS-001',date:add(today,-7),category:'Raw Material',item:'Maida (All Purpose Flour)',qty:200,unit:'KG',issuedto:'Production Line 1',by:'Ramesh Patil',remarks:'Batch FGB-2025-004 production'},
+    {id:DB.id(),misno:'MIS-002',date:add(today,-5),category:'Raw Material',item:'Paneer (Fresh)',qty:60,unit:'KG',issuedto:'Production Line 2',by:'Ramesh Patil',remarks:'Paneer Butter Masala production'},
+    {id:DB.id(),misno:'MIS-003',date:add(today,-3),category:'Packaging',item:'400g PP Microwavable Container',qty:300,unit:'Units',issuedto:'Packing Line 1',by:'Suresh Kumar',remarks:'FG-001 dispatch packing'},
+  ];
+
+  DB.set('rm',rms);DB.set('fg',fgs);DB.set('pm',pms);DB.set('grn',grns);DB.set('issues',issues);
+  DB.set('seeded',['yes']);
+}
+
+// ========== NAVIGATION ==========
+const panelTitles={dashboard:'Dashboard','alerts-panel':'Alerts & Notifications','raw-materials':'Raw Materials','finished-goods':'Finished Goods',packaging:'Packaging Materials',movements:'GRN & Material Issues','purchase-orders':'Purchase Orders',reports:'Reports'};
+function showPanel(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const items=document.querySelectorAll('.sb-item');
+  items.forEach(i=>{if(i.getAttribute('onclick')&&i.getAttribute('onclick').includes("'"+id+"'"))i.classList.add('active')});
+  document.getElementById('topbar-title').textContent=panelTitles[id]||id;
+  if(id==='dashboard')refreshDashboard();
+  if(id==='raw-materials')renderRM();
+  if(id==='finished-goods')renderFG();
+  if(id==='packaging')renderPM();
+  if(id==='movements'){renderGRN();renderIssues();}
+  if(id==='purchase-orders')generatePOSuggestions();
+  if(id==='reports')renderReports();
+  if(id==='alerts-panel')renderAlerts();
+}
+function switchTab(el,target){
+  const parent=el.closest('.panel')||document.body;
+  el.parentNode.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const panels=el.closest('.panel').querySelectorAll('.tab-panel');
+  panels.forEach(p=>p.classList.remove('active'));
+  document.getElementById(target).classList.add('active');
+  if(target==='rpt-summary'||target==='rpt-valuation'||target==='rpt-consumption'||target==='rpt-aging')renderReports();
+}
+
+// ========== MODALS ==========
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='dispatch-modal')populateDispatchDropdown();
+}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+window.addEventListener('click',e=>{if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open')});
+
+// ========== ALERTS ENGINE ==========
+function getAlerts(){
+  const alerts=[];const today=new Date();
+  // RM low stock
+  DB.get('rm').forEach(r=>{
+    if(parseFloat(r.qty)<=parseFloat(r.reorder))
+      alerts.push({type:'critical',title:`Low Stock: ${r.name}`,desc:`Stock: ${r.qty} ${r.unit} | Reorder Level: ${r.reorder} ${r.unit} | Supplier: ${r.supplier}`,cat:'Raw Material'});
+  });
+  // RM expiry
+  DB.get('rm').forEach(r=>{
+    if(!r.expiry)return;
+    const diff=Math.ceil((new Date(r.expiry)-today)/86400000);
+    if(diff<=30&&diff>=0)alerts.push({type:'critical',title:`Expiring Soon: ${r.name}`,desc:`Expires in ${diff} days (${r.expiry}) | Batch: ${r.batch}`,cat:'Raw Material'});
+    else if(diff<=60&&diff>30)alerts.push({type:'warning',title:`Expiry Notice: ${r.name}`,desc:`Expires in ${diff} days (${r.expiry}) | Batch: ${r.batch}`,cat:'Raw Material'});
+  });
+  // RM pending CoA
+  DB.get('rm').forEach(r=>{
+    if(r.coa==='Pending')alerts.push({type:'warning',title:`CoA Pending: ${r.name}`,desc:`Batch ${r.batch} awaiting CoA approval`,cat:'Raw Material'});
+  });
+  // FG expiry
+  DB.get('fg').forEach(f=>{
+    const diff=Math.ceil((new Date(f.expiry)-today)/86400000);
+    const stock=parseFloat(f.produced)-parseFloat(f.dispatched);
+    if(stock<=0)return;
+    if(diff<=30&&diff>=0)alerts.push({type:'critical',title:`FG Near Expiry: ${f.name}`,desc:`${stock} units expire in ${diff} days (${f.expiry}) | Batch: ${f.batch}`,cat:'Finished Goods'});
+  });
+  // FG overcommitted
+  DB.get('fg').forEach(f=>{
+    const free=parseFloat(f.produced)-parseFloat(f.dispatched)-parseFloat(f.reserved);
+    if(free<0)alerts.push({type:'critical',title:`Overcommitted: ${f.name}`,desc:`Reserved: ${f.reserved} | Available: ${parseFloat(f.produced)-parseFloat(f.dispatched)} | Shortfall: ${Math.abs(free)} units`,cat:'Finished Goods'});
+  });
+  // PM low stock
+  DB.get('pm').forEach(p=>{
+    if(parseFloat(p.qty)<=parseFloat(p.reorder))
+      alerts.push({type:'warning',title:`Low Packaging: ${p.desc}`,desc:`Stock: ${p.qty} ${p.unit} | Reorder Level: ${p.reorder} | Supplier: ${p.supplier}`,cat:'Packaging'});
+  });
+  return alerts;
+}
+function updateAlertBadge(){
+  const n=getAlerts().length;
+  document.getElementById('alert-count-badge').textContent=n;
+  document.getElementById('alert-topbadge').textContent=n+' Alert'+(n!==1?'s':'');
+  document.getElementById('alert-topbadge').style.background=n>0?'var(--red)':'#1D9E75';
+}
+function renderAlerts(){
+  const alerts=getAlerts();
+  const c=document.getElementById('all-alerts-container');
+  if(!alerts.length){c.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No active alerts</div><p>All stock levels and expiry dates are within acceptable ranges.</p></div>';return;}
+  const bycat={};alerts.forEach(a=>{if(!bycat[a.cat])bycat[a.cat]=[];bycat[a.cat].push(a);});
+  let h='';
+  Object.keys(bycat).forEach(cat=>{
+    h+=`<div style="font-size:13px;font-weight:600;color:var(--text2);margin:16px 0 8px">${cat}</div><div class="alerts-grid">`;
+    bycat[cat].forEach(a=>{h+=`<div class="alert-card ${a.type}"><span class="alert-icon">${a.type==='critical'?'🔴':'🟡'}</span><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`;});
+    h+='</div>';
+  });
+  c.innerHTML=h;
+}
+
+// ========== DASHBOARD ==========
+function refreshDashboard(){
+  const today=new Date();
+  document.getElementById('dash-date').textContent='Today: '+today.toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const rm=DB.get('rm'),fg=DB.get('fg'),pm=DB.get('pm'),grn=DB.get('grn'),issues=DB.get('issues');
+  const rmLow=rm.filter(r=>parseFloat(r.qty)<=parseFloat(r.reorder)).length;
+  const fgStock=fg.reduce((s,f)=>s+(parseFloat(f.produced)-parseFloat(f.dispatched)),0);
+  const alerts=getAlerts().length;
+  const rmVal=rm.reduce((s,r)=>s+(parseFloat(r.qty)*parseFloat(r.rate||0)),0);
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card teal"><div class="stat-label">Raw Materials (SKUs)</div><div class="stat-value">${rm.length}</div><div class="stat-sub">${rmLow} below reorder level</div></div>
+    <div class="stat-card blue"><div class="stat-label">Finished Goods (Units)</div><div class="stat-value">${fgStock.toLocaleString('en-IN')}</div><div class="stat-sub">${fg.length} active SKUs</div></div>
+    <div class="stat-card amber"><div class="stat-label">Active Alerts</div><div class="stat-value">${alerts}</div><div class="stat-sub">Requiring attention</div></div>
+    <div class="stat-card red"><div class="stat-label">RM Valuation</div><div class="stat-value">₹${(rmVal/100000).toFixed(2)}L</div><div class="stat-sub">Current stock value</div></div>`;
+  // Low stock RM
+  const lowRM=rm.filter(r=>parseFloat(r.qty)<=parseFloat(r.reorder));
+  const rmTbody=document.getElementById('dash-rm-low');
+  rmTbody.innerHTML=lowRM.length?lowRM.map(r=>{
+    const pct=Math.round(parseFloat(r.qty)/parseFloat(r.reorder)*100);
+    return`<tr><td><b>${r.name}</b></td><td class="mono">${r.qty} ${r.unit}</td><td class="mono">${r.reorder} ${r.unit}</td><td>${pct<=50?`<span class="badge badge-red">Critical</span>`:`<span class="badge badge-amber">Low</span>`}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty-state" style="padding:24px;color:var(--text3)">✅ All stock levels OK</td></tr>';
+  // Expiry FG
+  const expFG=fg.filter(f=>{const diff=Math.ceil((new Date(f.expiry)-today)/86400000);return diff<=60&&diff>=0&&(parseFloat(f.produced)-parseFloat(f.dispatched))>0;}).sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+  const fgTbody=document.getElementById('dash-fg-expiry');
+  fgTbody.innerHTML=expFG.length?expFG.map(f=>{
+    const diff=Math.ceil((new Date(f.expiry)-today)/86400000);
+    return`<tr><td><b>${f.name}</b></td><td class="mono">${f.batch}</td><td class="mono">${f.expiry}</td><td>${diff<=30?`<span class="badge badge-red">${diff}d</span>`:`<span class="badge badge-amber">${diff}d</span>`}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text3)">✅ No near-expiry items</td></tr>';
+  // Recent movements
+  const allMoves=[...grn.map(g=>({date:g.date,type:'GRN',item:g.item,qty:'+'+g.qty,party:g.supplier,ref:g.grnno})),...issues.map(i=>({date:i.date,type:'Issue',item:i.item,qty:'-'+i.qty,party:i.issuedto,ref:i.misno})),...DB.get('dispatches').map(d=>({date:d.date,type:'Dispatch',item:d.item,qty:'-'+d.qty,party:d.customer,ref:d.dispno}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+  const mvTbody=document.getElementById('dash-movements');
+  mvTbody.innerHTML=allMoves.length?allMoves.map(m=>`<tr><td class="mono">${m.date}</td><td><span class="badge ${m.type==='GRN'?'badge-green':m.type==='Issue'?'badge-amber':'badge-blue'}">${m.type}</span></td><td>${m.item}</td><td class="mono">${m.qty}</td><td>${m.party||'—'}</td><td class="mono">${m.ref}</td></tr>`).join(''):'<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3)">No movements recorded yet</td></tr>';
+  updateAlertBadge();
+}
+
+// ========== RAW MATERIALS ==========
+function renderRM(filter='',statusFilter=''){
+  const rm=DB.get('rm').filter(r=>{
+    const q=filter.toLowerCase();
+    const match=!q||r.name.toLowerCase().includes(q)||r.code.toLowerCase().includes(q)||(r.supplier||'').toLowerCase().includes(q);
+    const s=getStockStatus(r.qty,r.reorder,r.maxstock);
+    const smatch=!statusFilter||s===statusFilter;
+    return match&&smatch;
+  });
+  const today=new Date();
+  document.getElementById('rm-table').innerHTML=rm.length?rm.map(r=>{
+    const s=getStockStatus(r.qty,r.reorder,r.maxstock);
+    const badge=s==='Low Stock'?'badge-red':s==='Overstocked'?'badge-amber':'badge-green';
+    const expiryStr=r.expiry?`<span class="mono">${r.expiry}</span>`:'—';
+    const daysLeft=r.expiry?Math.ceil((new Date(r.expiry)-today)/86400000):null;
+    const expiryBadge=daysLeft!==null&&daysLeft<=30?` <span class="badge badge-red">${daysLeft}d</span>`:daysLeft!==null&&daysLeft<=60?` <span class="badge badge-amber">${daysLeft}d</span>`:'';
+    const coaBadge=r.coa==='Approved'?'badge-teal':r.coa==='Pending'?'badge-amber':'badge-red';
+    return`<tr>
+      <td><span class="tag">${r.code}</span></td>
+      <td><b>${r.name}</b></td>
+      <td>${r.grade||'—'}</td>
+      <td class="mono">${r.qty}</td>
+      <td>${r.unit}</td>
+      <td class="mono">${r.reorder}</td>
+      <td class="mono">${r.maxstock||'—'}</td>
+      <td>${r.supplier||'—'}</td>
+      <td style="font-size:12px">${r.zone||'—'}</td>
+      <td>${expiryStr}${expiryBadge}</td>
+      <td><span class="badge ${coaBadge}">${r.coa}</span></td>
+      <td><span class="badge ${badge}">${s}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="deleteItem('rm','${r.id}','${r.name}')">🗑</button></td>
+    </tr>`;}).join(''):`<tr><td colspan="13"><div class="empty-state"><div class="empty-icon">🌾</div><div class="empty-title">No raw materials found</div><p>Click "+ Add Material" to get started</p></div></td></tr>`;
+}
+function getStockStatus(qty,reorder,max){
+  if(parseFloat(qty)<=parseFloat(reorder))return'Low Stock';
+  if(max&&parseFloat(qty)>=parseFloat(max))return'Overstocked';
+  return'OK';
+}
+function saveRM(){
+  const fields=['rm-code','rm-name','rm-grade','rm-qty','rm-unit','rm-reorder','rm-maxstock','rm-supplier','rm-leadtime','rm-rate','rm-received','rm-batch','rm-coa','rm-zone','rm-expiry','rm-remarks'];
+  const v=fields.map(f=>document.getElementById(f)?.value||'');
+  if(!v[0]||!v[1]||!v[3]||!v[5]){alert('Please fill in required fields (Code, Name, Qty, Reorder Level)');return;}
+  const rm=DB.get('rm');
+  rm.push({id:DB.id(),code:v[0],name:v[1],grade:v[2],qty:parseFloat(v[3]),unit:v[4],reorder:parseFloat(v[5]),maxstock:parseFloat(v[6])||null,supplier:v[7],leadtime:v[8],rate:parseFloat(v[9])||0,received:v[10],batch:v[11],coa:v[12],zone:v[13],expiry:v[14],remarks:v[15]});
+  DB.set('rm',rm);closeModal('rm-modal');fields.forEach(f=>{if(document.getElementById(f))document.getElementById(f).value=''});
+  renderRM();updateAlertBadge();alert('✅ Raw material added successfully!');
+}
+function filterTable(tbodyId,q){if(tbodyId==='rm-table')renderRM(q);else if(tbodyId==='fg-table')renderFG(q);else if(tbodyId==='pm-table')renderPM(q);}
+function filterRMStatus(s){renderRM(document.querySelector('#raw-materials .search-input')?.value||'',s);}
+
+// ========== FINISHED GOODS ==========
+function renderFG(filter=''){
+  const fg=DB.get('fg').filter(f=>{
+    const q=filter.toLowerCase();
+    return!q||f.name.toLowerCase().includes(q)||f.sku.toLowerCase().includes(q)||f.batch.toLowerCase().includes(q);
+  });
+  const today=new Date();
+  document.getElementById('fg-table').innerHTML=fg.length?fg.map(f=>{
+    const stock=parseFloat(f.produced)-parseFloat(f.dispatched);
+    const free=stock-parseFloat(f.reserved);
+    const daysLeft=Math.ceil((new Date(f.expiry)-today)/86400000);
+    const expiryBadge=daysLeft<=30?`<span class="badge badge-red">${daysLeft}d</span>`:daysLeft<=60?`<span class="badge badge-amber">${daysLeft}d</span>`:`<span class="badge badge-green">${daysLeft}d</span>`;
+    const stockBadge=stock<=0?`<span class="badge badge-red">Out of Stock</span>`:free<0?`<span class="badge badge-red">Overcommitted</span>`:'';
+    return`<tr>
+      <td><span class="tag">${f.sku}</span></td>
+      <td><b>${f.name}</b></td>
+      <td class="mono">${f.batch}</td>
+      <td class="mono">${f.produced}</td>
+      <td class="mono">${f.dispatched}</td>
+      <td class="mono"><b>${stock}</b>${stockBadge}</td>
+      <td>${f.unit}</td>
+      <td class="mono">${f.reserved||0}</td>
+      <td class="mono">${free>=0?free:`<span style="color:var(--red)">${free}</span>`}</td>
+      <td class="mono">${f.mfgdate}</td>
+      <td class="mono">${f.expiry}</td>
+      <td>${expiryBadge}</td>
+      <td style="font-size:12px">${f.location||'—'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="deleteItem('fg','${f.id}','${f.name}')">🗑</button></td>
+    </tr>`;}).join(''):`<tr><td colspan="14"><div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">No finished goods found</div><p>Click "+ Add Product" to get started</p></div></td></tr>`;
+}
+function saveFG(){
+  const v=['fg-sku','fg-name','fg-batch','fg-produced','fg-dispatched','fg-unit','fg-reserved','fg-soref','fg-mfgdate','fg-expiry','fg-shelflife','fg-location','fg-temp'].map(f=>document.getElementById(f)?.value||'');
+  if(!v[0]||!v[1]||!v[2]||!v[3]){alert('Please fill in required fields (SKU, Name, Batch, Qty Produced)');return;}
+  const fg=DB.get('fg');
+  fg.push({id:DB.id(),sku:v[0],name:v[1],batch:v[2],produced:parseFloat(v[3]),dispatched:parseFloat(v[4])||0,unit:v[5]||'Units',reserved:parseFloat(v[6])||0,soref:v[7],mfgdate:v[8],expiry:v[9],shelflife:v[10],location:v[11],temp:v[12]});
+  DB.set('fg',fg);closeModal('fg-modal');
+  ['fg-sku','fg-name','fg-batch','fg-produced','fg-dispatched','fg-reserved','fg-soref','fg-mfgdate','fg-expiry','fg-shelflife','fg-location'].forEach(f=>{if(document.getElementById(f))document.getElementById(f).value=''});
+  renderFG();updateAlertBadge();alert('✅ Finished good added!');
+}
+function populateDispatchDropdown(){
+  const sel=document.getElementById('dispatch-item');
+  sel.innerHTML='<option value="">Select product</option>';
+  DB.get('fg').forEach(f=>{
+    const stock=parseFloat(f.produced)-parseFloat(f.dispatched);
+    if(stock>0)sel.innerHTML+=`<option value="${f.id}">${f.name} (Free: ${stock-parseFloat(f.reserved)} ${f.unit})</option>`;
+  });
+}
+function saveDispatch(){
+  const fgid=document.getElementById('dispatch-item').value;
+  const qty=parseFloat(document.getElementById('dispatch-qty').value);
+  const date=document.getElementById('dispatch-date').value;
+  const customer=document.getElementById('dispatch-customer').value;
+  const soref=document.getElementById('dispatch-soref').value;
+  const by=document.getElementById('dispatch-by').value;
+  const remarks=document.getElementById('dispatch-remarks').value;
+  if(!fgid||!qty||!date){alert('Please fill required fields (Product, Date, Qty)');return;}
+  const fg=DB.get('fg');
+  const idx=fg.findIndex(f=>f.id===fgid);
+  if(idx<0)return;
+  const avail=parseFloat(fg[idx].produced)-parseFloat(fg[idx].dispatched);
+  if(qty>avail){alert(`Cannot dispatch ${qty}. Only ${avail} in stock.`);return;}
+  fg[idx].dispatched=parseFloat(fg[idx].dispatched)+qty;
+  DB.set('fg',fg);
+  const dispatches=DB.get('dispatches');
+  const n=dispatches.length+1;
+  dispatches.push({id:DB.id(),dispno:`DSP-${String(n).padStart(3,'0')}`,date,item:fg[idx].name,qty,unit:fg[idx].unit,customer,soref,by,remarks});
+  DB.set('dispatches',dispatches);
+  closeModal('dispatch-modal');renderFG();updateAlertBadge();alert(`✅ Dispatch of ${qty} units posted!`);
+}
+
+// ========== PACKAGING ==========
+function renderPM(filter=''){
+  const pm=DB.get('pm').filter(p=>{
+    const q=filter.toLowerCase();
+    return!q||p.desc.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)||p.type.toLowerCase().includes(q);
+  });
+  document.getElementById('pm-table').innerHTML=pm.length?pm.map(p=>{
+    const low=parseFloat(p.qty)<=parseFloat(p.reorder);
+    const badge=low?'badge-red':'badge-green';
+    const status=low?'Low Stock':'OK';
+    return`<tr>
+      <td><span class="tag">${p.code}</span></td>
+      <td><span class="badge badge-gray">${p.type}</span></td>
+      <td><b>${p.desc}</b></td>
+      <td style="font-size:12px;max-width:160px">${p.spec||'—'}</td>
+      <td class="mono">${p.qty}</td>
+      <td>${p.unit}</td>
+      <td style="font-size:12px">${p.linkedsku||'—'}</td>
+      <td>${p.supplier||'—'}</td>
+      <td class="mono">${p.moq||'—'}</td>
+      <td class="mono">₹${p.rate||'—'}</td>
+      <td><span class="badge ${badge}">${status}</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="deleteItem('pm','${p.id}','${p.desc}')">🗑</button></td>
+    </tr>`;}).join(''):`<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">🏷️</div><div class="empty-title">No packaging materials found</div><p>Click "+ Add Packaging" to get started</p></div></td></tr>`;
+}
+function savePM(){
+  const v=['pm-code','pm-type','pm-desc','pm-spec','pm-qty','pm-unit','pm-linkedsku','pm-supplier','pm-moq','pm-leadtime','pm-rate','pm-reorder','pm-consumption'].map(f=>document.getElementById(f)?.value||'');
+  if(!v[0]||!v[2]||!v[4]){alert('Please fill required fields (Code, Description, Qty)');return;}
+  const pm=DB.get('pm');
+  pm.push({id:DB.id(),code:v[0],type:v[1],desc:v[2],spec:v[3],qty:parseFloat(v[4]),unit:v[5]||'Units',linkedsku:v[6],supplier:v[7],moq:parseFloat(v[8])||0,leadtime:v[9],rate:parseFloat(v[10])||0,reorder:parseFloat(v[11])||0,consumption:parseFloat(v[12])||0});
+  DB.set('pm',pm);closeModal('pm-modal');renderPM();updateAlertBadge();alert('✅ Packaging material added!');
+}
+
+// ========== GRN ==========
+function populateGRNDropdown(){
+  const cat=document.getElementById('grn-category').value;
+  const sel=document.getElementById('grn-item');
+  sel.innerHTML='<option value="">Select item</option>';
+  const items=cat==='Raw Material'?DB.get('rm'):cat==='Packaging'?DB.get('pm'):[];
+  items.forEach(i=>sel.innerHTML+=`<option value="${i.id}">${i.name||i.desc} (${i.code})</option>`);
+}
+function saveGRN(){
+  const cat=document.getElementById('grn-category').value;
+  const itemId=document.getElementById('grn-item').value;
+  const qty=parseFloat(document.getElementById('grn-qty').value);
+  const date=document.getElementById('grn-date').value;
+  const supplier=document.getElementById('grn-supplier').value;
+  const invoice=document.getElementById('grn-invoice').value;
+  const batch=document.getElementById('grn-batch').value;
+  const coa=document.getElementById('grn-coa').value;
+  const by=document.getElementById('grn-by').value;
+  const remarks=document.getElementById('grn-remarks').value;
+  if(!cat||!itemId||!qty||!date||!supplier){alert('Please fill all required fields');return;}
+  const store=cat==='Raw Material'?'rm':'pm';
+  const items=DB.get(store);
+  const idx=items.findIndex(i=>i.id===itemId);
+  const itemName=idx>=0?(items[idx].name||items[idx].desc):'';
+  if(idx>=0){items[idx].qty=parseFloat(items[idx].qty)+qty;DB.set(store,items);}
+  const grns=DB.get('grn');
+  const n=grns.length+1;
+  grns.push({id:DB.id(),grnno:`GRN-${String(n).padStart(3,'0')}`,date,category:cat,item:itemName,qty,unit:items[idx]?.unit||'',supplier,invoice,batch,coa,by,remarks});
+  DB.set('grn',grns);closeModal('grn-modal');renderGRN();updateAlertBadge();alert(`✅ GRN posted! ${qty} ${items[idx]?.unit||''} of ${itemName} added to stock.`);
+}
+function renderGRN(){
+  const grns=DB.get('grn');
+  document.getElementById('grn-table').innerHTML=grns.length?[...grns].reverse().map(g=>`<tr>
+    <td class="mono">${g.grnno}</td><td class="mono">${g.date}</td>
+    <td><span class="badge badge-teal">${g.category}</span></td>
+    <td><b>${g.item}</b></td><td class="mono">${g.qty}</td><td>${g.unit||''}</td>
+    <td>${g.supplier}</td><td class="mono">${g.batch||'—'}</td>
+    <td class="mono">${g.invoice||'—'}</td>
+    <td><span class="badge ${g.coa==='Approved'?'badge-green':g.coa==='Pending'?'badge-amber':'badge-red'}">${g.coa}</span></td>
+    <td>${g.by||'—'}</td>
+  </tr>`).join(''):`<tr><td colspan="11"><div class="empty-state" style="padding:32px"><div class="empty-icon">📋</div><div class="empty-title">No GRN records</div></div></td></tr>`;
+}
+
+// ========== ISSUES ==========
+function populateIssueDropdown(){
+  const cat=document.getElementById('issue-category').value;
+  const sel=document.getElementById('issue-item');
+  sel.innerHTML='<option value="">Select item</option>';
+  const items=cat==='Raw Material'?DB.get('rm'):cat==='Packaging'?DB.get('pm'):cat==='Finished Goods'?DB.get('fg'):[];
+  items.forEach(i=>sel.innerHTML+=`<option value="${i.id}">${i.name||i.desc} (${i.code||i.sku})</option>`);
+}
+function saveIssue(){
+  const cat=document.getElementById('issue-category').value;
+  const itemId=document.getElementById('issue-item').value;
+  const qty=parseFloat(document.getElementById('issue-qty').value);
+  const date=document.getElementById('issue-date').value;
+  const issuedto=document.getElementById('issue-to').value;
+  const by=document.getElementById('issue-by').value;
+  const remarks=document.getElementById('issue-remarks').value;
+  if(!cat||!itemId||!qty||!date||!issuedto){alert('Please fill all required fields');return;}
+  const store=cat==='Raw Material'?'rm':cat==='Packaging'?'pm':'fg';
+  const items=DB.get(store);
+  const idx=items.findIndex(i=>i.id===itemId);
+  const itemName=idx>=0?(items[idx].name||items[idx].desc):'';
+  const curQty=store==='fg'?parseFloat(items[idx].produced)-parseFloat(items[idx].dispatched):parseFloat(items[idx]?.qty||0);
+  if(qty>curQty){alert(`Insufficient stock. Available: ${curQty}`);return;}
+  if(idx>=0){if(store==='fg'){items[idx].dispatched=parseFloat(items[idx].dispatched)+qty;}else{items[idx].qty=parseFloat(items[idx].qty)-qty;}DB.set(store,items);}
+  const iss=DB.get('issues');
+  const n=iss.length+1;
+  iss.push({id:DB.id(),misno:`MIS-${String(n).padStart(3,'0')}`,date,category:cat,item:itemName,qty,unit:items[idx]?.unit||'',issuedto,by,remarks});
+  DB.set('issues',iss);closeModal('issue-modal');renderIssues();updateAlertBadge();alert(`✅ Issue posted! ${qty} of ${itemName} issued to ${issuedto}.`);
+}
+function renderIssues(){
+  const iss=DB.get('issues');
+  document.getElementById('issue-table').innerHTML=iss.length?[...iss].reverse().map(i=>`<tr>
+    <td class="mono">${i.misno}</td><td class="mono">${i.date}</td>
+    <td><span class="badge badge-amber">${i.category}</span></td>
+    <td><b>${i.item}</b></td><td class="mono">${i.qty}</td><td>${i.unit||''}</td>
+    <td>${i.issuedto}</td><td>${i.by||'—'}</td><td style="font-size:12px">${i.remarks||'—'}</td>
+  </tr>`).join(''):`<tr><td colspan="9"><div class="empty-state" style="padding:32px"><div class="empty-icon">🔄</div><div class="empty-title">No issue records</div></div></td></tr>`;
+}
+
+// ========== PURCHASE ORDERS ==========
+function generatePOSuggestions(){
+  const rm=DB.get('rm').filter(r=>parseFloat(r.qty)<=parseFloat(r.reorder));
+  const pm=DB.get('pm').filter(p=>parseFloat(p.qty)<=parseFloat(p.reorder));
+  const container=document.getElementById('po-suggestions');
+  const infobox=document.getElementById('po-info-box');
+  if(!rm.length&&!pm.length){
+    infobox.textContent='✅ No purchase orders needed at this time. All stock levels are above reorder points.';
+    infobox.style.background='var(--teal3)';container.innerHTML='';return;
+  }
+  infobox.textContent=`${rm.length+pm.length} item(s) require replenishment based on current stock vs. reorder levels.`;
+  infobox.style.background='#FFFBEB';infobox.style.borderColor='#FDE68A';infobox.style.color='#92400E';
+  let h='<div class="table-wrap"><div class="table-toolbar"><span class="table-toolbar-title">📋 Suggested Purchase Orders</span></div><table><thead><tr><th>Category</th><th>Code</th><th>Item</th><th>Current Stock</th><th>Reorder Level</th><th>Max Stock</th><th>Suggest Order Qty</th><th>Supplier</th><th>Lead Time</th><th>Est. Value (₹)</th></tr></thead><tbody>';
+  [...rm.map(r=>({...r,cat:'Raw Material'})),...pm.map(p=>({...p,cat:'Packaging',name:p.desc}))].forEach(r=>{
+    const suggestQty=(parseFloat(r.maxstock)||parseFloat(r.reorder)*3)-parseFloat(r.qty);
+    const estVal=(suggestQty*(parseFloat(r.rate)||0)).toLocaleString('en-IN');
+    h+=`<tr><td><span class="badge badge-teal">${r.cat}</span></td><td><span class="tag">${r.code}</span></td><td><b>${r.name}</b></td><td class="mono">${r.qty} ${r.unit}</td><td class="mono">${r.reorder} ${r.unit}</td><td class="mono">${r.maxstock||'—'}</td><td class="mono"><b>${Math.max(0,suggestQty)} ${r.unit}</b></td><td>${r.supplier||'—'}</td><td>${r.leadtime?r.leadtime+' days':'—'}</td><td class="mono">₹${estVal}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  container.innerHTML=h;
+}
+
+// ========== REPORTS ==========
+function renderReports(){
+  const rm=DB.get('rm'),fg=DB.get('fg'),pm=DB.get('pm'),grn=DB.get('grn'),issues=DB.get('issues');
+  const today=new Date();
+  // Summary
+  const rmVal=rm.reduce((s,r)=>s+(parseFloat(r.qty)*parseFloat(r.rate||0)),0);
+  const fgUnits=fg.reduce((s,f)=>s+(parseFloat(f.produced)-parseFloat(f.dispatched)),0);
+  document.getElementById('report-summary-content').innerHTML=`
+    <div class="stats-row" style="margin-bottom:18px">
+      <div class="stat-card teal"><div class="stat-label">RM SKUs</div><div class="stat-value">${rm.length}</div><div class="stat-sub">${rm.filter(r=>getStockStatus(r.qty,r.reorder,r.maxstock)==='Low Stock').length} low stock</div></div>
+      <div class="stat-card blue"><div class="stat-label">FG Units in Stock</div><div class="stat-value">${fgUnits.toLocaleString('en-IN')}</div><div class="stat-sub">Across ${fg.length} SKUs</div></div>
+      <div class="stat-card amber"><div class="stat-label">Packaging Items</div><div class="stat-value">${pm.length}</div><div class="stat-sub">${pm.filter(p=>parseFloat(p.qty)<=parseFloat(p.reorder)).length} low stock</div></div>
+      <div class="stat-card red"><div class="stat-label">Total GRNs</div><div class="stat-value">${grn.length}</div><div class="stat-sub">${issues.length} issue slips</div></div>
+    </div>
+    <div class="table-wrap"><div class="table-toolbar"><span class="table-toolbar-title">Raw Material Stock Summary</span></div>
+    <table><thead><tr><th>Code</th><th>Material</th><th>Stock</th><th>Unit</th><th>Reorder Level</th><th>Supplier</th><th>Expiry</th><th>Status</th></tr></thead><tbody>
+    ${rm.map(r=>{const s=getStockStatus(r.qty,r.reorder,r.maxstock);return`<tr><td><span class="tag">${r.code}</span></td><td>${r.name}</td><td class="mono">${r.qty}</td><td>${r.unit}</td><td class="mono">${r.reorder}</td><td>${r.supplier||'—'}</td><td class="mono">${r.expiry||'—'}</td><td><span class="badge ${s==='Low Stock'?'badge-red':s==='Overstocked'?'badge-amber':'badge-green'}">${s}</span></td></tr>`;}).join('')}
+    </tbody></table></div>`;
+  // Valuation
+  const totalRM=rm.reduce((s,r)=>s+(parseFloat(r.qty)*parseFloat(r.rate||0)),0);
+  document.getElementById('report-valuation-content').innerHTML=`
+    <div class="stats-row" style="margin-bottom:18px">
+      <div class="stat-card teal"><div class="stat-label">RM Valuation</div><div class="stat-value">₹${(totalRM/100000).toFixed(2)}L</div><div class="stat-sub">At last purchase rate</div></div>
+      <div class="stat-card blue"><div class="stat-label">RM Items</div><div class="stat-value">${rm.length}</div></div>
+    </div>
+    <div class="table-wrap"><div class="table-toolbar"><span class="table-toolbar-title">Raw Material Valuation Report — as on ${today.toLocaleDateString('en-IN')}</span></div>
+    <table><thead><tr><th>Code</th><th>Material</th><th>Qty</th><th>Unit</th><th>Rate (₹)</th><th>Value (₹)</th></tr></thead><tbody>
+    ${rm.map(r=>{const val=parseFloat(r.qty)*parseFloat(r.rate||0);return`<tr><td><span class="tag">${r.code}</span></td><td>${r.name}</td><td class="mono">${r.qty}</td><td>${r.unit}</td><td class="mono">₹${r.rate||0}</td><td class="mono"><b>₹${val.toLocaleString('en-IN')}</b></td></tr>`;}).join('')}
+    <tr style="background:var(--teal3)"><td colspan="5"><b>Total RM Value</b></td><td class="mono"><b>₹${totalRM.toLocaleString('en-IN')}</b></td></tr>
+    </tbody></table></div>`;
+  // Consumption (from issues)
+  document.getElementById('report-consumption-content').innerHTML=`
+    <div class="table-wrap"><div class="table-toolbar"><span class="table-toolbar-title">Material Issue / Consumption Log</span></div>
+    <table><thead><tr><th>MIS No.</th><th>Date</th><th>Material</th><th>Qty Issued</th><th>Unit</th><th>Issued To</th></tr></thead><tbody>
+    ${issues.length?[...issues].reverse().map(i=>`<tr><td class="mono">${i.misno}</td><td class="mono">${i.date}</td><td>${i.item}</td><td class="mono">${i.qty}</td><td>${i.unit||''}</td><td>${i.issuedto}</td></tr>`).join(''):'<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text3)">No consumption data yet</td></tr>'}
+    </tbody></table></div>`;
+  // Aging
+  const aged=fg.map(f=>{
+    const stock=parseFloat(f.produced)-parseFloat(f.dispatched);
+    const daysLeft=Math.ceil((new Date(f.expiry)-today)/86400000);
+    const ageInDays=Math.ceil((today-new Date(f.mfgdate))/86400000);
+    return{...f,stock,daysLeft,ageInDays};
+  }).filter(f=>f.stock>0).sort((a,b)=>a.daysLeft-b.daysLeft);
+  document.getElementById('report-aging-content').innerHTML=`
+    <div class="table-wrap"><div class="table-toolbar"><span class="table-toolbar-title">Finished Goods Aging & Dead Stock Report</span></div>
+    <table><thead><tr><th>SKU</th><th>Product</th><th>Batch</th><th>Units in Stock</th><th>Age (Days)</th><th>Expiry</th><th>Days to Expiry</th><th>Risk</th></tr></thead><tbody>
+    ${aged.map(f=>{
+      const risk=f.daysLeft<=30?'<span class="badge badge-red">⚠️ Critical</span>':f.daysLeft<=60?'<span class="badge badge-amber">Caution</span>':'<span class="badge badge-green">OK</span>';
+      return`<tr><td><span class="tag">${f.sku}</span></td><td>${f.name}</td><td class="mono">${f.batch}</td><td class="mono">${f.stock}</td><td class="mono">${f.ageInDays}d</td><td class="mono">${f.expiry}</td><td class="mono">${f.daysLeft}d</td><td>${risk}</td></tr>`;
+    }).join('')||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--text3)">No finished goods in stock</td></tr>'}
+    </tbody></table></div>`;
+}
+
+// ========== DELETE ==========
+let deleteTarget={};
+function deleteItem(store,id,name){
+  deleteTarget={store,id};
+  document.getElementById('delete-item-name').textContent=name;
+  openModal('delete-modal');
+}
+function confirmDelete(){
+  const items=DB.get(deleteTarget.store).filter(i=>i.id!==deleteTarget.id);
+  DB.set(deleteTarget.store,items);
+  closeModal('delete-modal');
+  if(deleteTarget.store==='rm')renderRM();
+  else if(deleteTarget.store==='fg')renderFG();
+  else if(deleteTarget.store==='pm')renderPM();
+  updateAlertBadge();
+}
+
+// ========== INIT ==========
+seedDemoData();
+document.getElementById('dash-date').textContent='Today: '+new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+['rm-received','grn-date','issue-date','dispatch-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=new Date().toISOString().split('T')[0];});
+refreshDashboard();
+</script>
+</body>
+</html>
