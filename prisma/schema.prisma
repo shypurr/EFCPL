@@ -1,0 +1,280 @@
+// Prisma Schema for EFCPL Inventory Management System with RBAC & First-Time Auth Flow
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// 1. DYNAMIC SYSTEM LOOKUPS & CONFIGURATION
+// ==========================================
+
+model SystemLookup {
+  id        String   @id @default(cuid())
+  group     String   // "UNIT", "COA_STATUS", "PACKAGING_TYPE", "TEMP_CONDITION"
+  code      String   // "KG", "LTR", "APPROVED", "CARTON"
+  label     String   // "Kilograms (KG)", "Approved", "Corrugated Carton"
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([group, code])
+  @@index([group])
+}
+
+model CategoryMaster {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StorageLocation {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  zone        String
+  tempSpec    String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rawMaterials  RawMaterial[]
+  finishedGoods FinishedGood[]
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+// ==========================================
+// 2. CORE INVENTORY ENTITIES
+// ==========================================
+
+model RawMaterial {
+  id               String           @id @default(cuid())
+  code             String           @unique
+  name             String
+  grade            String?
+  qty              Float            @default(0)
+  unit             String
+  reorderLevel     Float            @default(0)
+  maxStock         Float?
+  supplierName     String?
+  leadTimeDays     Int?             @default(0)
+  lastPurchaseRate Float?           @default(0)
+  lastReceivedDate DateTime?
+  batchNumber      String?
+  coaStatus        String           @default("Approved")
+  locationId       String?
+  location         StorageLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  expiryDate       DateTime?
+  attributes       Json?
+  remarks          String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  movements InventoryMovement[]
+
+  @@index([code])
+  @@index([name])
+}
+
+model FinishedGood {
+  id            String           @id @default(cuid())
+  sku           String           @unique
+  name          String
+  batchNumber   String
+  qtyProduced   Float            @default(0)
+  qtyDispatched Float            @default(0)
+  unit          String           @default("Units")
+  qtyReserved   Float            @default(0)
+  salesOrderRef String?
+  mfgDate       DateTime
+  expiryDate    DateTime
+  shelfLifeDays Int?
+  locationId    String?
+  location      StorageLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  tempCondition String?
+  attributes    Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  dispatches DispatchEntry[]
+  movements  InventoryMovement[]
+
+  @@index([sku])
+  @@index([batchNumber])
+}
+
+model PackagingMaterial {
+  id               String   @id @default(cuid())
+  code             String   @unique
+  type             String
+  description      String
+  specification    String?
+  qty              Float    @default(0)
+  unit             String   @default("Units")
+  linkedSkus       String?
+  supplier         String?
+  moq              Float?   @default(0)
+  leadTimeDays     Int?     @default(0)
+  lastPurchaseRate Float?   @default(0)
+  reorderLevel     Float    @default(0)
+  avgConsumption   Float?   @default(0)
+  attributes       Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  movements InventoryMovement[]
+
+  @@index([code])
+}
+
+// ==========================================
+// 3. MOVEMENTS & TRANSACTIONS
+// ==========================================
+
+enum MovementType {
+  GRN
+  ISSUE
+  DISPATCH
+  ADJUSTMENT
+}
+
+model InventoryMovement {
+  id             String             @id @default(cuid())
+  refNumber      String             @unique
+  type           MovementType
+  category       String
+  materialId     String?
+  rawMaterial    RawMaterial?       @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  finishedGoodId String?
+  finishedGood   FinishedGood?      @relation(fields: [finishedGoodId], references: [id], onDelete: SetNull)
+  packagingId    String?
+  packaging      PackagingMaterial? @relation(fields: [packagingId], references: [id], onDelete: SetNull)
+
+  itemTitle      String
+  qty            Float
+  unit           String
+  party          String?
+  invoiceRef     String?
+  batchRef       String?
+  coaStatus      String?
+  performedBy    String             @default("Store Manager")
+  remarks        String?
+  movementDate   DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+
+  @@index([refNumber])
+  @@index([type])
+  @@index([movementDate])
+}
+
+model DispatchEntry {
+  id             String       @id @default(cuid())
+  dispatchNo     String       @unique
+  dispatchDate   DateTime     @default(now())
+  finishedGoodId String
+  finishedGood   FinishedGood @relation(fields: [finishedGoodId], references: [id], onDelete: Cascade)
+  qtyDispatched  Float
+  unit           String
+  customerName   String
+  salesOrderRef  String?
+  dispatchedBy   String
+  remarks        String?
+  createdAt      DateTime     @default(now())
+}
+
+// ==========================================
+// 4. AUTHENTICATION & RBAC (DYNAMIC ROLES & FIRST-TIME FLOW)
+// ==========================================
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  module      String
+  description String?
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+}
+
+model Role {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  colorTag      String   @default("#3B82F6")
+  description   String?
+  isSystemAdmin Boolean  @default(false)
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  users           User[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model User {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  username              String   @unique // Auto-generated from email prefix (e.g. suresh from suresh@efcpl.com)
+  passwordHash          String?  // Nullable initially before first-time password creation
+  isPasswordSet         Boolean  @default(false) // Track if staff has completed first-time setup
+  name                  String
+  roleId                String?
+  role                  Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  useDefaultPermissions Boolean  @default(true)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  userPermissions       UserPermission[]
+  auditLogs             AuditLog[]
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+}
