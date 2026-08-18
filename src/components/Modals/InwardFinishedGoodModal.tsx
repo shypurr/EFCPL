@@ -1,26 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { createFinishedGood } from '@/actions/finished-goods';
+import { X, ArrowDownRight } from 'lucide-react';
+import { inwardFinishedGood } from '@/actions/finished-goods';
 
-interface ModalProps {
+interface InwardFinishedGoodModalProps {
   isOpen: boolean;
   onClose: () => void;
-  units?: { code: string; label: string }[];
+  finishedGoods: any[];
   locations?: { id: string; name: string }[];
   onSuccess: () => void;
 }
 
-export default function AddFinishedGoodModal({
+export default function InwardFinishedGoodModal({
   isOpen,
   onClose,
-  units = [
-    { code: 'KG', label: 'Kilograms (KG)' },
-    { code: 'Units', label: 'Units (PCS)' },
-    { code: 'Boxes', label: 'Boxes' },
-    { code: 'Jars', label: 'Jars' },
-  ],
+  finishedGoods = [],
   locations = [
     { id: 'Cold Store Zone A', name: 'Cold Store Zone A' },
     { id: 'Deep Freezer 2', name: 'Deep Freezer 2' },
@@ -28,7 +23,7 @@ export default function AddFinishedGoodModal({
     { id: 'Dry Warehouse', name: 'Dry Warehouse' },
   ],
   onSuccess,
-}: ModalProps) {
+}: InwardFinishedGoodModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     sku: '',
@@ -43,27 +38,44 @@ export default function AddFinishedGoodModal({
 
   if (!isOpen) return null;
 
-  // Auto-calculate shelf life
+  const selectedFg = finishedGoods.find((f) => f.sku === formData.sku);
+
+  const handleSkuSelect = (selectedSku: string) => {
+    const item = finishedGoods.find((f) => f.sku === selectedSku);
+    if (item) {
+      setFormData({
+        ...formData,
+        sku: item.sku,
+        name: item.name,
+        unit: item.unit || 'KG',
+        location: item.location || 'Cold Store Zone A',
+        mfgDate: item.mfgDate ? new Date(item.mfgDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
+      });
+    } else {
+      setFormData({ ...formData, sku: selectedSku });
+    }
+  };
+
   const mfgTime = formData.mfgDate ? new Date(formData.mfgDate).getTime() : 0;
   const expTime = formData.expiryDate ? new Date(formData.expiryDate).getTime() : 0;
   const computedShelfLife = mfgTime && expTime ? Math.max(0, Math.ceil((expTime - mfgTime) / (1000 * 60 * 60 * 24))) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.sku || !formData.name || !formData.batchNumber || !formData.quantityProduced || !formData.expiryDate) {
-      alert('Please fill in required fields (SKU, Product Name, Batch Number, Quantity Produced, Expiry Date)');
+    if (!formData.sku || !formData.batchNumber || !formData.quantityProduced || !formData.expiryDate) {
+      alert('Please select FG SKU, enter Batch Number, Quantity Produced, and Expiry Date');
       return;
     }
 
     setLoading(true);
     const mfg = formData.mfgDate || new Date().toISOString().split('T')[0];
-    const res = await createFinishedGood({
+    const res = await inwardFinishedGood({
       sku: formData.sku,
       name: formData.name,
       batchNumber: formData.batchNumber,
       quantityProduced: Number(formData.quantityProduced),
-      totalStock: Number(formData.quantityProduced),
-      unit: formData.unit || 'KG',
+      unit: formData.unit,
       mfgDate: mfg,
       expiryDate: formData.expiryDate,
       location: formData.location,
@@ -71,7 +83,7 @@ export default function AddFinishedGoodModal({
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ New Finished Good "${formData.name}" added to catalog successfully!`);
+      alert(`✅ Successfully added ${formData.quantityProduced} ${formData.unit} to Finished Good ${formData.name}!`);
       setFormData({
         sku: '',
         name: '',
@@ -95,9 +107,9 @@ export default function AddFinishedGoodModal({
         <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              📦 Add Brand New Finished Good (Catalog SKU)
+              <ArrowDownRight className="w-5 h-5 text-amber-400" /> Log Finished Good Production Batch
             </h3>
-            <p className="text-xs text-slate-400">Define a new manufactured food product in the master catalog</p>
+            <p className="text-xs text-slate-400">Record newly produced stock for an existing product SKU</p>
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
@@ -105,65 +117,84 @@ export default function AddFinishedGoodModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* FG SKU Dropdown */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">SKU Code *</label>
-              <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
-                placeholder="FGPRO007"
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Select FG SKU *</label>
+              <select
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
                 value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                onChange={(e) => handleSkuSelect(e.target.value)}
                 required
-              />
+              >
+                <option value="" className="bg-[#162440] text-slate-400">-- Choose FG SKU --</option>
+                {finishedGoods.map((fg) => (
+                  <option key={fg.id} value={fg.sku} className="bg-[#162440] text-white">
+                    {fg.sku} — {fg.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Product Name (Auto-filled but editable) */}
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Product Name *</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Paneer Tikka 400g"
+                placeholder="Select SKU above to auto-fill"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
+          </div>
+
+          {/* Current Stock Banner */}
+          {selectedFg && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-300 flex items-center justify-between">
+              <div>
+                <span>Current Total Stock: </span>
+                <strong className="text-white font-mono">{selectedFg.totalStock} {selectedFg.unit}</strong>
+                <span className="text-slate-400 ml-2">(Last Batch: {selectedFg.batchNumber})</span>
+              </div>
+              <div className="font-mono text-emerald-400 font-bold">
+                Shelf Life: {selectedFg.shelfLifeDays} days
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">New Batch Number *</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
-                placeholder="FGB-2025-009"
+                placeholder="e.g. FGB-2026-101"
                 value={formData.batchNumber}
                 onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
                 required
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Initial Quantity Produced *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Quantity Produced *</label>
               <input
                 type="number"
                 step="any"
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="500"
+                placeholder="e.g. 500"
                 value={formData.quantityProduced}
                 onChange={(e) => setFormData({ ...formData, quantityProduced: e.target.value })}
                 required
               />
             </div>
+
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
-              <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              <input
+                className="w-full text-xs p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-slate-300 font-mono"
                 value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              >
-                {units.map((u) => (
-                  <option key={u.code} value={u.code} className="bg-[#162440] text-white">
-                    {u.label}
-                  </option>
-                ))}
-              </select>
+                readOnly
+              />
             </div>
           </div>
 
@@ -178,6 +209,7 @@ export default function AddFinishedGoodModal({
                 required
               />
             </div>
+
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date *</label>
               <input
@@ -188,6 +220,7 @@ export default function AddFinishedGoodModal({
                 required
               />
             </div>
+
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Calculated Shelf Life</label>
               <div className="w-full text-xs p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-emerald-400 font-bold">
@@ -224,7 +257,7 @@ export default function AddFinishedGoodModal({
               disabled={loading}
               className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Master Finished Good'}
+              {loading ? 'Logging Batch...' : 'Log Finished Batch'}
             </button>
           </div>
         </form>

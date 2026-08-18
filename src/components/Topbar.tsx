@@ -7,10 +7,12 @@ interface TopbarProps {
   title: string;
   alertCount: number;
   currentUser: any;
-  onAlertClick: () => void;
-  onRefresh: () => void;
-  onLoginClick: () => void;
-  onLogoutClick: () => void;
+  onAlertClick?: () => void;
+  onRefresh?: () => void;
+  onLoginClick?: () => void;
+  onLogoutClick?: () => void;
+  onOpenLogin?: () => void;
+  onLogout?: () => void;
 }
 
 export default function Topbar({
@@ -21,6 +23,8 @@ export default function Topbar({
   onRefresh,
   onLoginClick,
   onLogoutClick,
+  onOpenLogin,
+  onLogout,
 }: TopbarProps) {
   return (
     <header className="hidden md:flex bg-white border-b border-slate-200 px-7 h-14 items-center justify-between sticky top-0 z-30 shadow-2xs">
@@ -66,8 +70,8 @@ export default function Topbar({
             </div>
 
             <button
-              onClick={onLogoutClick}
-              className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all"
+              onClick={onLogout || onLogoutClick}
+              className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all cursor-pointer"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -75,8 +79,8 @@ export default function Topbar({
           </div>
         ) : (
           <button
-            onClick={onLoginClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#0A1628] hover:bg-[#1E2F4A] transition-all shadow-2xs"
+            onClick={onOpenLogin || onLoginClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#0A1628] hover:bg-[#1E2F4A] transition-all shadow-2xs cursor-pointer"
           >
             <LogIn className="w-3.5 h-3.5" />
             Sign In / Admin

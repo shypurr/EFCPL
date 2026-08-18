@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, Mail, ShieldCheck, UserCheck, KeyRound, ArrowRight } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, UserCheck, KeyRound, ArrowRight, X } from 'lucide-react';
 import { checkUserLoginStatus, setupFirstTimePassword, loginUser } from '@/actions/auth';
 
 interface LoginModalProps {
@@ -39,11 +39,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
     }
 
     setUserInfo(res);
-    if (res.status === 'NEEDS_PASSWORD_SETUP') {
-      setStep('FIRST_TIME_SETUP');
-    } else {
-      setStep('PASSWORD_LOGIN');
-    }
+    setStep('PASSWORD_LOGIN');
   };
 
   const handleFirstTimeSetup = async (e: React.FormEvent) => {
@@ -62,11 +58,11 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
     }
 
     setLoading(true);
-    const res = await setupFirstTimePassword(userInfo.userId, password);
+    const res = await setupFirstTimePassword(identifier, password);
     setLoading(false);
 
     if (res.success) {
-      setSuccessMsg(res.message || 'Password created successfully!');
+      setSuccessMsg('Password created successfully!');
       setPassword('');
       setConfirmPassword('');
       setStep('PASSWORD_LOGIN');
@@ -80,7 +76,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
     setError('');
     setLoading(true);
 
-    const res = await loginUser({ identifier, password });
+    const res = await loginUser(identifier, password);
     setLoading(false);
 
     if (res.success) {
@@ -92,10 +88,16 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-[#0D1B2E] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-[#1E2F4A] animate-in fade-in zoom-in duration-200 text-white">
         {/* HEADER */}
-        <div className="bg-[#0A1628] text-white p-6 text-center relative">
+        <div className="bg-[#0A1628] text-white p-6 text-center relative border-b border-[#1E2F4A]">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1 text-slate-400 hover:text-white rounded-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div className="w-12 h-12 rounded-xl bg-[#1D9E75] flex items-center justify-center font-bold text-2xl mx-auto shadow-md mb-2">
             E
           </div>
@@ -111,13 +113,13 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
         <div className="p-6 space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs font-medium">
+            <div className="bg-red-500/10 border border-red-500/30 text-red-300 p-3 rounded-lg text-xs font-medium">
               ⚠️ {error}
             </div>
           )}
 
           {successMsg && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs font-medium">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 p-3 rounded-lg text-xs font-medium">
               {successMsg}
             </div>
           )}
@@ -126,14 +128,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           {step === 'IDENTIFIER' && (
             <form onSubmit={handleCheckIdentifier} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
+                <label className="text-xs font-bold text-slate-300 block mb-1">
                   Email Address or Username *
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="text"
-                    className="w-full text-xs pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-medium"
                     placeholder="admin@efcpl.com or username"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
@@ -142,27 +144,27 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-[11px] text-slate-600 font-mono space-y-1">
-                <div className="font-bold text-slate-800 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="bg-[#162440] border border-[#2A3F66] p-3 rounded-xl text-[11px] text-slate-300 font-mono space-y-1">
+                <div className="font-bold text-white flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                   Default Admin Access:
                 </div>
-                <div>Username / Email: <span className="font-bold text-slate-900">admin@efcpl.com</span></div>
-                <div>Password: <span className="font-bold text-slate-900">admin123password</span></div>
+                <div>Username / Email: <span className="font-bold text-emerald-400">admin@efcpl.com</span></div>
+                <div>Password: <span className="font-bold text-emerald-400">admin123password</span></div>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 text-xs font-bold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-md flex items-center gap-1.5"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span>{loading ? 'Checking...' : 'Next'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -174,23 +176,23 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           {/* STEP 2: FIRST-TIME PASSWORD SETUP */}
           {step === 'FIRST_TIME_SETUP' && (
             <form onSubmit={handleFirstTimeSetup} className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl text-xs text-blue-900 space-y-1">
-                <div className="font-bold flex items-center gap-1">
-                  <UserCheck className="w-4 h-4 text-blue-600" />
+              <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-xl text-xs text-blue-300 space-y-1">
+                <div className="font-bold flex items-center gap-1 text-white">
+                  <UserCheck className="w-4 h-4 text-blue-400" />
                   Welcome, {userInfo?.name}!
                 </div>
-                <p className="text-[11px] text-blue-800">
+                <p className="text-[11px] text-blue-200/80">
                   This is your first login. Please create a password for your account (@{userInfo?.username}).
                 </p>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Create Password *</label>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Create Password *</label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="password"
-                    className="w-full text-xs pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="Min 6 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -200,12 +202,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Confirm Password *</label>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Confirm Password *</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="password"
-                    className="w-full text-xs pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="Repeat password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -218,14 +220,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
                 <button
                   type="button"
                   onClick={() => setStep('IDENTIFIER')}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  className="text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
                 >
                   ← Back
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md"
+                  className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {loading ? 'Saving...' : 'Save Password & Continue'}
                 </button>
@@ -236,28 +238,28 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           {/* STEP 3: PASSWORD LOGIN FOR REGISTERED ACCOUNTS */}
           {step === 'PASSWORD_LOGIN' && (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg text-xs flex items-center justify-between">
+              <div className="bg-[#162440] border border-[#2A3F66] p-2.5 rounded-lg text-xs flex items-center justify-between">
                 <div>
-                  <span className="text-slate-500 font-medium">Account: </span>
-                  <span className="font-bold text-slate-900">{userInfo?.name || identifier}</span>
+                  <span className="text-slate-400 font-medium">Account: </span>
+                  <span className="font-bold text-white">{userInfo?.name || identifier}</span>
                   <span className="text-slate-400 font-mono text-[10px] block">@{userInfo?.username || identifier}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setStep('IDENTIFIER')}
-                  className="text-[11px] font-bold text-emerald-600 hover:underline"
+                  className="text-[11px] font-bold text-[#1D9E75] hover:underline cursor-pointer"
                 >
                   Change
                 </button>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Enter Password *</label>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Enter Password *</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="password"
-                    className="w-full text-xs pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    className="w-full text-xs pl-9 pr-3 py-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -271,14 +273,14 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                  className="px-4 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-5 py-2 text-xs font-bold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-md"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {loading ? 'Authenticating...' : 'Sign In to Portal'}
                 </button>

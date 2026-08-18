@@ -6,11 +6,20 @@ import MobileNav from '@/components/MobileNav';
 import Topbar from '@/components/Topbar';
 
 // Actions
-import { getRawMaterials, deleteRawMaterial } from '@/actions/raw-materials';
-import { getFinishedGoods, deleteFinishedGood } from '@/actions/finished-goods';
-import { getPackagingMaterials, deletePackagingMaterial } from '@/actions/packaging';
-import { getMovements } from '@/actions/movements';
-import { getSystemLookups, getStorageLocations } from '@/actions/lookups';
+import { getRawMaterials, deleteRawMaterial } from '@/actions/inventory';
+import { getPackagingMaterials, deletePackagingMaterial } from '@/actions/inventory';
+import {
+  getRMIssues,
+  deleteRMIssue,
+  getProductionLogs,
+  deleteProductionLog,
+  getPackagingIssues,
+  deletePackagingIssue,
+  getFinishedGoods,
+  deleteFinishedGood,
+  getDispatches,
+  deleteDispatch,
+} from '@/actions/operations';
 import { getPurchaseOrderSuggestions } from '@/actions/po-suggestions';
 import { getReportsData } from '@/actions/reports';
 import { getCurrentUser, logoutUser, getUsers, deleteUser } from '@/actions/auth';
@@ -18,225 +27,198 @@ import { getRoles, getPermissions, deleteRole } from '@/actions/roles';
 
 // Modals
 import AddRawMaterialModal from '@/components/Modals/AddRawMaterialModal';
-import AddFinishedGoodModal from '@/components/Modals/AddFinishedGoodModal';
+import InwardRawMaterialModal from '@/components/Modals/InwardRawMaterialModal';
 import AddPackagingModal from '@/components/Modals/AddPackagingModal';
-import GRNModal from '@/components/Modals/GRNModal';
+import InwardPackagingModal from '@/components/Modals/InwardPackagingModal';
+import AddFinishedGoodModal from '@/components/Modals/AddFinishedGoodModal';
+import InwardFinishedGoodModal from '@/components/Modals/InwardFinishedGoodModal';
 import IssueModal from '@/components/Modals/IssueModal';
+import ProductionModal from '@/components/Modals/ProductionModal';
+import PackagingIssueModal from '@/components/Modals/PackagingIssueModal';
 import DispatchModal from '@/components/Modals/DispatchModal';
-import AddLookupModal from '@/components/Modals/AddLookupModal';
 import LoginModal from '@/components/LoginModal';
 import RoleManagerModal from '@/components/Admin/RoleManagerModal';
 import UserManagerModal from '@/components/Admin/UserManagerModal';
+
+// Icons
+import {
+  Wheat,
+  Boxes,
+  RefreshCw,
+  Factory,
+  Box,
+  PackageCheck,
+  Truck,
+  PlusCircle,
+  ShieldCheck,
+  Users,
+  Search,
+  Plus,
+  Trash2,
+  Edit,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  Layers,
+  ArrowDownRight,
+} from 'lucide-react';
 
 export default function Home() {
   const [activePanel, setActivePanel] = useState('dashboard');
   const [loading, setLoading] = useState(true);
 
-  // User Session & RBAC
+  // User & Auth State
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [rolesList, setRolesList] = useState<any[]>([]);
   const [permissionsList, setPermissionsList] = useState<any[]>([]);
   const [editingRole, setEditingRole] = useState<any>(null);
 
-  // Data states
+  // Data States
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
+  const [packagedMaterials, setPackagedMaterials] = useState<any[]>([]);
+  const [rmIssues, setRmIssues] = useState<any[]>([]);
+  const [productionLogs, setProductionLogs] = useState<any[]>([]);
+  const [packagingIssues, setPackagingIssues] = useState<any[]>([]);
   const [finishedGoods, setFinishedGoods] = useState<any[]>([]);
-  const [packaging, setPackaging] = useState<any[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
+  const [dispatches, setDispatches] = useState<any[]>([]);
   const [poSuggestions, setPoSuggestions] = useState<any[]>([]);
   const [reportsData, setReportsData] = useState<any>(null);
 
-  // Lookups
-  const [units, setUnits] = useState<any[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [coaStatuses, setCoaStatuses] = useState<any[]>([]);
-  const [packagingTypes, setPackagingTypes] = useState<any[]>([]);
-  const [tempConditions, setTempConditions] = useState<any[]>([]);
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Search & Filter
-  const [rmSearch, setRmSearch] = useState('');
-  const [rmStatusFilter, setRmStatusFilter] = useState('');
-  const [fgSearch, setFgSearch] = useState('');
-  const [pmSearch, setPmSearch] = useState('');
+  // Master Modals State (New Catalog Items)
+  const [modalNewRm, setModalNewRm] = useState(false);
+  const [modalNewPm, setModalNewPm] = useState(false);
+  const [modalNewFg, setModalNewFg] = useState(false);
 
-  // Modals state
-  const [modalRm, setModalRm] = useState(false);
-  const [modalFg, setModalFg] = useState(false);
-  const [modalPm, setModalPm] = useState(false);
-  const [modalGrn, setModalGrn] = useState(false);
-  const [modalIssue, setModalIssue] = useState(false);
+  // Tab Inward / Operations Modals State (Existing Items)
+  const [modalInwardRm, setModalInwardRm] = useState(false);
+  const [modalInwardPm, setModalInwardPm] = useState(false);
+  const [modalInwardFg, setModalInwardFg] = useState(false);
+  const [modalRmIssue, setModalRmIssue] = useState(false);
+  const [modalProduction, setModalProduction] = useState(false);
+  const [modalPackagingIssue, setModalPackagingIssue] = useState(false);
   const [modalDispatch, setModalDispatch] = useState(false);
-  const [modalLookup, setModalLookup] = useState(false);
+
+  // Admin & Auth Modals State
   const [modalLogin, setModalLogin] = useState(false);
   const [modalRole, setModalRole] = useState(false);
   const [modalUser, setModalUser] = useState(false);
 
-  // Reports tabs
-  const [reportTab, setReportTab] = useState<'summary' | 'valuation' | 'consumption' | 'aging'>('summary');
-  const [movementTab, setMovementTab] = useState<'grn' | 'issue'>('grn');
-  const [adminTab, setAdminTab] = useState<'users' | 'roles' | 'lookups'>('roles');
+  const [dbError, setDbError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [
-      userRes,
-      usersRes,
-      rolesRes,
-      permsRes,
-      rmRes,
-      fgRes,
-      pmRes,
-      mvRes,
-      unitRes,
-      locRes,
-      coaRes,
-      pkgTypeRes,
-      tempRes,
-      poRes,
-      rptRes,
-    ] = await Promise.all([
-      getCurrentUser(),
-      getUsers(),
-      getRoles(),
-      getPermissions(),
-      getRawMaterials(rmSearch, rmStatusFilter),
-      getFinishedGoods(fgSearch),
-      getPackagingMaterials(pmSearch),
-      getMovements(20),
-      getSystemLookups('UNIT'),
-      getStorageLocations(),
-      getSystemLookups('COA_STATUS'),
-      getSystemLookups('PACKAGING_TYPE'),
-      getSystemLookups('TEMP_CONDITION'),
-      getPurchaseOrderSuggestions(),
-      getReportsData(),
-    ]);
+    setDbError(null);
+    try {
+      const [
+        userRes,
+        usersRes,
+        rolesRes,
+        permsRes,
+        rmRes,
+        pmRes,
+        rmIssueRes,
+        prodRes,
+        pmIssueRes,
+        fgRes,
+        dispatchRes,
+        poRes,
+        rptRes,
+      ] = await Promise.all([
+        getCurrentUser(),
+        getUsers(),
+        getRoles(),
+        getPermissions(),
+        getRawMaterials(searchQuery),
+        getPackagingMaterials(searchQuery),
+        getRMIssues(searchQuery),
+        getProductionLogs(searchQuery),
+        getPackagingIssues(searchQuery),
+        getFinishedGoods(searchQuery),
+        getDispatches(searchQuery),
+        getPurchaseOrderSuggestions(),
+        getReportsData(),
+      ]);
 
-    if (userRes) setCurrentUser(userRes);
-    if (usersRes.success) setUsersList(usersRes.data);
-    if (rolesRes.success) setRolesList(rolesRes.data);
-    if (permsRes.success) setPermissionsList(permsRes.data);
-    if (rmRes.success) setRawMaterials(rmRes.data);
-    if (fgRes.success) setFinishedGoods(fgRes.data);
-    if (pmRes.success) setPackaging(pmRes.data);
-    if (mvRes.success) setMovements(mvRes.data);
-    if (unitRes.success) setUnits(unitRes.data);
-    if (locRes.success) setLocations(locRes.data);
-    if (coaRes.success) setCoaStatuses(coaRes.data);
-    if (pkgTypeRes.success) setPackagingTypes(pkgTypeRes.data);
-    if (tempRes.success) setTempConditions(tempRes.data);
-    if (poRes.success) setPoSuggestions(poRes.data);
-    if (rptRes.success) setReportsData(rptRes.data);
-
-    setLoading(false);
-  }, [rmSearch, rmStatusFilter, fgSearch, pmSearch]);
+      if (userRes && userRes.data) setCurrentUser(userRes.data);
+      if (usersRes?.success && usersRes.data) setUsersList(usersRes.data);
+      if (rolesRes?.success && rolesRes.data) setRolesList(rolesRes.data);
+      if (permsRes?.success && permsRes.data) setPermissionsList(permsRes.data);
+      if (rmRes?.success && rmRes.data) setRawMaterials(rmRes.data);
+      if (pmRes?.success && pmRes.data) setPackagedMaterials(pmRes.data);
+      if (rmIssueRes?.success && rmIssueRes.data) setRmIssues(rmIssueRes.data);
+      if (prodRes?.success && prodRes.data) setProductionLogs(prodRes.data);
+      if (pmIssueRes?.success && pmIssueRes.data) setPackagingIssues(pmIssueRes.data);
+      if (fgRes?.success && fgRes.data) setFinishedGoods(fgRes.data);
+      if (dispatchRes?.success && dispatchRes.data) setDispatches(dispatchRes.data);
+      if (poRes?.success && poRes.data) setPoSuggestions(poRes.data);
+      if (rptRes?.success && rptRes.data) setReportsData(rptRes.data);
+    } catch (err: any) {
+      console.error('Data loading error:', err);
+      setDbError(err.message || 'Database connection or initialization error');
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const handleLogout = async () => {
-    await logoutUser();
-    setCurrentUser(null);
-    loadData();
-  };
+  // Compute live alerts count
+  const lowRmCount = rawMaterials.filter((r) => r.stock <= r.reorderLevel).length;
+  const lowPmCount = packagedMaterials.filter((p) => p.stock <= p.reorderLevel).length;
+  const totalAlertsCount = lowRmCount + lowPmCount;
 
-  // Compute live alerts
-  const computeAlerts = () => {
-    const alerts: any[] = [];
-    const today = new Date();
-
-    rawMaterials.forEach((r) => {
-      if (r.qty <= r.reorderLevel) {
-        alerts.push({
-          type: 'critical',
-          title: `Low Stock: ${r.name}`,
-          desc: `Stock: ${r.qty} ${r.unit} | Reorder Level: ${r.reorderLevel} ${r.unit} | Supplier: ${r.supplierName || '—'}`,
-          cat: 'Raw Material',
-        });
-      }
-
-      if (r.expiryDate) {
-        const diffDays = Math.ceil((new Date(r.expiryDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 30 && diffDays >= 0) {
-          alerts.push({
-            type: 'critical',
-            title: `Expiring Soon: ${r.name}`,
-            desc: `Expires in ${diffDays} days (${new Date(r.expiryDate).toISOString().split('T')[0]}) | Batch: ${r.batchNumber || '—'}`,
-            cat: 'Raw Material',
-          });
-        }
-      }
-
-      if (r.coaStatus === 'Pending') {
-        alerts.push({
-          type: 'warning',
-          title: `CoA Pending: ${r.name}`,
-          desc: `Batch ${r.batchNumber || '—'} awaiting CoA approval`,
-          cat: 'Raw Material',
-        });
-      }
-    });
-
-    finishedGoods.forEach((f) => {
-      const stock = f.qtyProduced - f.qtyDispatched;
-      if (stock <= 0) return;
-      const diffDays = Math.ceil((new Date(f.expiryDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays <= 30 && diffDays >= 0) {
-        alerts.push({
-          type: 'critical',
-          title: `FG Near Expiry: ${f.name}`,
-          desc: `${stock} units expire in ${diffDays} days (${new Date(f.expiryDate).toISOString().split('T')[0]}) | Batch: ${f.batchNumber}`,
-          cat: 'Finished Goods',
-        });
-      }
-
-      const free = stock - f.qtyReserved;
-      if (free < 0) {
-        alerts.push({
-          type: 'critical',
-          title: `Overcommitted: ${f.name}`,
-          desc: `Reserved: ${f.qtyReserved} | Available: ${stock} | Shortfall: ${Math.abs(free)} units`,
-          cat: 'Finished Goods',
-        });
-      }
-    });
-
-    packaging.forEach((p) => {
-      if (p.qty <= p.reorderLevel) {
-        alerts.push({
-          type: 'warning',
-          title: `Low Packaging: ${p.description}`,
-          desc: `Stock: ${p.qty} ${p.unit} | Reorder Level: ${p.reorderLevel} | Supplier: ${p.supplier || '—'}`,
-          cat: 'Packaging',
-        });
-      }
-    });
-
-    return alerts;
-  };
-
-  const activeAlerts = computeAlerts();
-
-  // Delete handlers
+  // Delete Actions
   const handleDeleteRM = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
+    if (confirm(`Are you sure you want to delete Raw Material "${name}"?`)) {
       await deleteRawMaterial(id);
       loadData();
     }
   };
 
+  const handleDeletePM = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete Packaged Material "${name}"?`)) {
+      await deletePackagingMaterial(id);
+      loadData();
+    }
+  };
+
+  const handleDeleteRMIssueItem = async (id: string) => {
+    if (confirm('Are you sure you want to delete this RM Issue record?')) {
+      await deleteRMIssue(id);
+      loadData();
+    }
+  };
+
+  const handleDeleteProdLog = async (id: string) => {
+    if (confirm('Are you sure you want to delete this Production Log?')) {
+      await deleteProductionLog(id);
+      loadData();
+    }
+  };
+
+  const handleDeletePMIssueItem = async (id: string) => {
+    if (confirm('Are you sure you want to delete this Packaging Issue record?')) {
+      await deletePackagingIssue(id);
+      loadData();
+    }
+  };
+
   const handleDeleteFG = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
+    if (confirm(`Are you sure you want to delete Finished Good "${name}"?`)) {
       await deleteFinishedGood(id);
       loadData();
     }
   };
 
-  const handleDeletePM = async (id: string, desc: string) => {
-    if (confirm(`Are you sure you want to delete ${desc}?`)) {
-      await deletePackagingMaterial(id);
+  const handleDeleteDispatchLog = async (id: string) => {
+    if (confirm('Are you sure you want to delete this Dispatch record?')) {
+      await deleteDispatch(id);
       loadData();
     }
   };
@@ -248,1142 +230,1341 @@ export default function Home() {
         alert(`✅ Role "${name}" deleted.`);
         loadData();
       } else {
-        alert('❌ Error: ' + res.error);
+        alert(`❌ ${res.error}`);
       }
     }
   };
 
   const handleDeleteUserItem = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete staff account "${name}"?`)) {
-      const res = await deleteUser(id);
-      if (res.success) {
-        alert(`✅ Staff account "${name}" deleted.`);
-        loadData();
-      } else {
-        alert('❌ Error: ' + res.error);
-      }
+    if (confirm(`Are you sure you want to delete user "${name}"?`)) {
+      await deleteUser(id);
+      loadData();
     }
   };
 
-  // Summary stats
-  const totalRMValuation = rawMaterials.reduce((s, r) => s + r.qty * (r.lastPurchaseRate || 0), 0);
-  const totalFGStock = finishedGoods.reduce((s, f) => s + (f.qtyProduced - f.qtyDispatched), 0);
-  const lowRMCount = rawMaterials.filter((r) => r.qty <= r.reorderLevel).length;
-
-  const panelTitles: Record<string, string> = {
-    dashboard: 'Dashboard Overview',
-    'alerts-panel': 'Alerts & Notifications',
-    'raw-materials': 'Raw Materials Master',
-    'finished-goods': 'Finished Goods Master',
-    packaging: 'Packaging Materials',
-    movements: 'GRN & Stock Issues Log',
-    'purchase-orders': 'Purchase Order Suggestions',
-    reports: 'Reports & Analytics',
-    settings: 'Admin User & Role Governance',
-  };
-
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900">
-      {/* DESKTOP SIDEBAR */}
-      <Sidebar activePanel={activePanel} setActivePanel={setActivePanel} alertCount={activeAlerts.length} />
+    <div className="min-h-screen bg-[#070E1A] text-slate-100 flex flex-col font-sans">
+      {/* SIDEBAR NAVIGATION (DESKTOP) */}
+      <Sidebar
+        activePanel={activePanel}
+        setActivePanel={setActivePanel}
+        alertCount={totalAlertsCount}
+      />
 
-      {/* MOBILE NAV BAR */}
-      <MobileNav activePanel={activePanel} setActivePanel={setActivePanel} alertCount={activeAlerts.length} />
+      {/* MOBILE NAVIGATION */}
+      <MobileNav
+        activePanel={activePanel}
+        setActivePanel={setActivePanel}
+        alertCount={totalAlertsCount}
+      />
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen pb-16 md:pb-0">
+      {/* MAIN CONTENT WORKSPACE */}
+      <div className="md:pl-64 flex-1 flex flex-col min-h-screen pb-16 md:pb-0">
+        {/* TOPBAR */}
         <Topbar
-          title={panelTitles[activePanel] || activePanel}
-          alertCount={activeAlerts.length}
+          title="EFCPL MES Dashboard"
+          alertCount={totalAlertsCount}
           currentUser={currentUser}
-          onAlertClick={() => setActivePanel('alerts-panel')}
-          onRefresh={loadData}
-          onLoginClick={() => setModalLogin(true)}
-          onLogoutClick={handleLogout}
+          onOpenLogin={() => setModalLogin(true)}
+          onLogout={async () => {
+            await logoutUser();
+            setCurrentUser(null);
+            loadData();
+          }}
         />
 
-        <main className="p-4 md:p-7 flex-1">
-          {/* ========================================== */}
-          {/* 1. DASHBOARD PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'dashboard' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+        {/* MAIN BODY */}
+        <main className="p-4 md:p-6 space-y-6 flex-1">
+
+          {dbError && (
+            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl flex items-center justify-between text-red-300">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                    Good day, {currentUser ? currentUser.name : 'EFCPL Team'}! 👋
-                  </h1>
-                  <p className="text-xs text-slate-500 font-mono mt-0.5">
-                    Today: {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
-                </div>
-                <button
-                  onClick={loadData}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs"
-                >
-                  ⟳ Refresh Data
-                </button>
-              </div>
-
-              {/* STATS ROW */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs border-t-4 border-t-emerald-500">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Raw Materials</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{rawMaterials.length}</div>
-                  <div className="text-xs text-amber-600 font-medium mt-1">{lowRMCount} below reorder level</div>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs border-t-4 border-t-blue-500">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Finished Goods</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{totalFGStock.toLocaleString('en-IN')}</div>
-                  <div className="text-xs text-slate-500 font-medium mt-1">{finishedGoods.length} active SKUs</div>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs border-t-4 border-t-amber-500">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Active Alerts</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">{activeAlerts.length}</div>
-                  <div className="text-xs text-red-500 font-medium mt-1">Requiring immediate action</div>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs border-t-4 border-t-red-500">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">RM Valuation</div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">₹{(totalRMValuation / 100000).toFixed(2)}L</div>
-                  <div className="text-xs text-slate-500 font-medium mt-1">Current stock value</div>
+                  <div className="font-bold text-sm text-white">Database Connection Status</div>
+                  <div className="text-xs">{dbError}</div>
                 </div>
               </div>
-
-              {/* TWO COLUMN GRID */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* LOW STOCK TABLE */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="p-3.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800 flex items-center justify-between">
-                    <span>⚠️ Low Stock — Raw Materials</span>
-                    <span className="text-[10px] font-normal text-slate-500">Auto-evaluated</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">Material</th>
-                          <th className="p-2.5">Stock</th>
-                          <th className="p-2.5">Reorder</th>
-                          <th className="p-2.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {rawMaterials.filter((r) => r.qty <= r.reorderLevel).length > 0 ? (
-                          rawMaterials
-                            .filter((r) => r.qty <= r.reorderLevel)
-                            .map((r) => {
-                              const pct = Math.round((r.qty / r.reorderLevel) * 100);
-                              return (
-                                <tr key={r.id} className="hover:bg-slate-50">
-                                  <td className="p-2.5 font-bold">{r.name}</td>
-                                  <td className="p-2.5 font-mono">{r.qty} {r.unit}</td>
-                                  <td className="p-2.5 font-mono">{r.reorderLevel} {r.unit}</td>
-                                  <td className="p-2.5">
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pct <= 50 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
-                                      {pct <= 50 ? 'Critical' : 'Low'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                        ) : (
-                          <tr>
-                            <td colSpan={4} className="p-6 text-center text-slate-400 font-medium">
-                              ✅ All stock levels OK
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* NEAR EXPIRY TABLE */}
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="p-3.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800 flex items-center justify-between">
-                    <span>📦 Near-Expiry — Finished Goods</span>
-                    <span className="text-[10px] font-normal text-slate-500">Sorted by expiry</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">Product</th>
-                          <th className="p-2.5">Batch</th>
-                          <th className="p-2.5">Expiry</th>
-                          <th className="p-2.5">Days Left</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {finishedGoods.filter((f) => {
-                          const diff = Math.ceil((new Date(f.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                          return diff <= 60 && diff >= 0 && f.qtyProduced - f.qtyDispatched > 0;
-                        }).length > 0 ? (
-                          finishedGoods
-                            .filter((f) => {
-                              const diff = Math.ceil((new Date(f.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                              return diff <= 60 && diff >= 0 && f.qtyProduced - f.qtyDispatched > 0;
-                            })
-                            .map((f) => {
-                              const diff = Math.ceil((new Date(f.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                              return (
-                                <tr key={f.id} className="hover:bg-slate-50">
-                                  <td className="p-2.5 font-bold">{f.name}</td>
-                                  <td className="p-2.5 font-mono">{f.batchNumber}</td>
-                                  <td className="p-2.5 font-mono">{new Date(f.expiryDate).toISOString().split('T')[0]}</td>
-                                  <td className="p-2.5">
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${diff <= 30 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
-                                      {diff}d
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                        ) : (
-                          <tr>
-                            <td colSpan={4} className="p-6 text-center text-slate-400 font-medium">
-                              ✅ No near-expiry items
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-              {/* RECENT MOVEMENTS LOG */}
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="p-3.5 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-800">
-                  🕐 Recent Movements (Last 10 Records)
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-200">
-                      <tr>
-                        <th className="p-2.5">Date</th>
-                        <th className="p-2.5">Type</th>
-                        <th className="p-2.5">Item</th>
-                        <th className="p-2.5">Qty</th>
-                        <th className="p-2.5">Party / Source</th>
-                        <th className="p-2.5">Ref No.</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {movements.slice(0, 10).map((m) => (
-                        <tr key={m.id} className="hover:bg-slate-50">
-                          <td className="p-2.5 font-mono">{new Date(m.movementDate).toISOString().split('T')[0]}</td>
-                          <td className="p-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${m.type === 'GRN' ? 'bg-emerald-100 text-emerald-800' : m.type === 'ISSUE' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
-                              {m.type}
-                            </span>
-                          </td>
-                          <td className="p-2.5 font-medium">{m.itemTitle}</td>
-                          <td className="p-2.5 font-mono font-bold">{m.type === 'GRN' ? `+${m.qty}` : `-${m.qty}`} {m.unit}</td>
-                          <td className="p-2.5 text-slate-600">{m.party || '—'}</td>
-                          <td className="p-2.5 font-mono text-slate-500">{m.refNumber}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <button
+                onClick={() => loadData()}
+                className="bg-red-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-all cursor-pointer"
+              >
+                ⟳ Retry Connection
+              </button>
             </div>
           )}
 
-          {/* ========================================== */}
-          {/* 2. ALERTS PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'alerts-panel' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">🔔 Alerts & Notifications</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">Active automated rules requiring operational attention</p>
-                </div>
-              </div>
-
-              {activeAlerts.length > 0 ? (
-                <div className="space-y-3">
-                  {activeAlerts.map((a, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3.5 rounded-xl border flex items-start gap-3 shadow-2xs ${
-                        a.type === 'critical'
-                          ? 'bg-red-50/80 border-red-200 text-red-950'
-                          : 'bg-amber-50/80 border-amber-200 text-amber-950'
-                      }`}
-                    >
-                      <span className="text-base">{a.type === 'critical' ? '🔴' : '🟡'}</span>
-                      <div className="flex-1">
-                        <div className="font-bold text-sm">{a.title}</div>
-                        <div className="text-xs text-slate-600 mt-0.5 font-medium">{a.desc}</div>
-                        <div className="mt-1.5">
-                          <span className="text-[10px] font-mono font-bold uppercase bg-white/80 px-2 py-0.5 rounded border border-slate-200">
-                            {a.cat}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white border border-slate-200 rounded-xl p-10 text-center">
-                  <div className="text-4xl mb-2">✅</div>
-                  <div className="font-bold text-slate-800 text-base">No Active Alerts</div>
-                  <p className="text-xs text-slate-500 mt-1">All stock levels, expiration windows, and CoA certifications are compliant.</p>
-                </div>
-              )}
+          {loading ? (
+            <div className="py-20 text-center text-slate-400 text-sm flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin"></div>
+              <span>Loading operational data from database...</span>
             </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 3. RAW MATERIALS PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'raw-materials' && (
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">🌾 Raw Materials</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">Stock tracking, GRN inward, reorder level management</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setModalGrn(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-2xs"
-                  >
-                    + GRN Entry
-                  </button>
-                  <button
-                    onClick={() => setModalRm(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-2xs"
-                  >
-                    + Add Material
-                  </button>
-                </div>
-              </div>
-
-              {/* SEARCH & FILTERS */}
-              <div className="flex flex-wrap gap-2">
-                <input
-                  type="text"
-                  placeholder="Search material code, name..."
-                  className="text-xs p-2 border border-slate-300 rounded-lg w-60 outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                  value={rmSearch}
-                  onChange={(e) => setRmSearch(e.target.value)}
-                />
-                <select
-                  className="text-xs p-2 border border-slate-300 rounded-lg outline-none bg-white font-medium"
-                  value={rmStatusFilter}
-                  onChange={(e) => setRmStatusFilter(e.target.value)}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="Low Stock">Low Stock</option>
-                  <option value="OK">OK</option>
-                  <option value="Overstocked">Overstocked</option>
-                </select>
-              </div>
-
-              {/* RAW MATERIALS TABLE */}
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-2.5">Code</th>
-                        <th className="p-2.5">Name</th>
-                        <th className="p-2.5">Grade</th>
-                        <th className="p-2.5">Stock</th>
-                        <th className="p-2.5">Unit</th>
-                        <th className="p-2.5">Reorder</th>
-                        <th className="p-2.5">Max</th>
-                        <th className="p-2.5">Supplier</th>
-                        <th className="p-2.5">Location</th>
-                        <th className="p-2.5">CoA</th>
-                        <th className="p-2.5">Status</th>
-                        <th className="p-2.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {rawMaterials.map((r) => {
-                        const status = r.qty <= r.reorderLevel ? 'Low Stock' : r.maxStock && r.qty >= r.maxStock ? 'Overstocked' : 'OK';
-                        return (
-                          <tr key={r.id} className="hover:bg-slate-50/80">
-                            <td className="p-2.5 font-mono"><span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 text-[10px]">{r.code}</span></td>
-                            <td className="p-2.5 font-bold text-slate-900">{r.name}</td>
-                            <td className="p-2.5 text-slate-500">{r.grade || '—'}</td>
-                            <td className="p-2.5 font-mono font-bold">{r.qty}</td>
-                            <td className="p-2.5">{r.unit}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{r.reorderLevel}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{r.maxStock || '—'}</td>
-                            <td className="p-2.5 text-slate-600">{r.supplierName || '—'}</td>
-                            <td className="p-2.5 text-slate-500 text-[11px]">{r.location?.name || '—'}</td>
-                            <td className="p-2.5">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${r.coaStatus === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                                {r.coaStatus}
-                              </span>
-                            </td>
-                            <td className="p-2.5">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${status === 'Low Stock' ? 'bg-red-100 text-red-800' : status === 'Overstocked' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                {status}
-                              </span>
-                            </td>
-                            <td className="p-2.5 text-right">
-                              <button
-                                onClick={() => handleDeleteRM(r.id, r.name)}
-                                className="text-red-500 hover:text-red-700 p-1 text-xs"
-                                title="Delete"
-                              >
-                                🗑
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 4. FINISHED GOODS PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'finished-goods' && (
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">📦 Finished Goods</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">Production batches, dispatch, cold storage aging</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setModalDispatch(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-2xs"
-                  >
-                    🚚 Dispatch
-                  </button>
-                  <button
-                    onClick={() => setModalFg(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-2xs"
-                  >
-                    + Add Product
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Search SKU, Product Name..."
-                  className="text-xs p-2 border border-slate-300 rounded-lg w-60 outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                  value={fgSearch}
-                  onChange={(e) => setFgSearch(e.target.value)}
-                />
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-2.5">SKU</th>
-                        <th className="p-2.5">Product</th>
-                        <th className="p-2.5">Batch</th>
-                        <th className="p-2.5">Produced</th>
-                        <th className="p-2.5">Dispatched</th>
-                        <th className="p-2.5">In Stock</th>
-                        <th className="p-2.5">Reserved</th>
-                        <th className="p-2.5">Free Stock</th>
-                        <th className="p-2.5">Expiry</th>
-                        <th className="p-2.5">Days Left</th>
-                        <th className="p-2.5">Temp Condition</th>
-                        <th className="p-2.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {finishedGoods.map((f) => {
-                        const stock = f.qtyProduced - f.qtyDispatched;
-                        const free = stock - f.qtyReserved;
-                        const diffDays = Math.ceil((new Date(f.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                        return (
-                          <tr key={f.id} className="hover:bg-slate-50/80">
-                            <td className="p-2.5 font-mono"><span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 text-[10px]">{f.sku}</span></td>
-                            <td className="p-2.5 font-bold text-slate-900">{f.name}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{f.batchNumber}</td>
-                            <td className="p-2.5 font-mono">{f.qtyProduced}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{f.qtyDispatched}</td>
-                            <td className="p-2.5 font-mono font-bold text-slate-900">{stock} {f.unit}</td>
-                            <td className="p-2.5 font-mono text-slate-500">{f.qtyReserved}</td>
-                            <td className="p-2.5 font-mono font-bold">{free >= 0 ? free : <span className="text-red-600">{free}</span>}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{new Date(f.expiryDate).toISOString().split('T')[0]}</td>
-                            <td className="p-2.5">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${diffDays <= 30 ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                {diffDays}d
-                              </span>
-                            </td>
-                            <td className="p-2.5 text-slate-500 text-[11px]">{f.tempCondition || 'Ambient'}</td>
-                            <td className="p-2.5 text-right">
-                              <button
-                                onClick={() => handleDeleteFG(f.id, f.name)}
-                                className="text-red-500 hover:text-red-700 p-1 text-xs"
-                              >
-                                🗑
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 5. PACKAGING PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'packaging' && (
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">🏷️ Packaging Materials</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">Cartons, labels, pouches, bottles, shrink wraps</p>
-                </div>
-                <button
-                  onClick={() => setModalPm(true)}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-2xs self-start"
-                >
-                  + Add Packaging
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Search packaging description, code..."
-                  className="text-xs p-2 border border-slate-300 rounded-lg w-60 outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                  value={pmSearch}
-                  onChange={(e) => setPmSearch(e.target.value)}
-                />
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-2.5">Code</th>
-                        <th className="p-2.5">Type</th>
-                        <th className="p-2.5">Description</th>
-                        <th className="p-2.5">Specification</th>
-                        <th className="p-2.5">Stock</th>
-                        <th className="p-2.5">Unit</th>
-                        <th className="p-2.5">Linked SKUs</th>
-                        <th className="p-2.5">Supplier</th>
-                        <th className="p-2.5">MOQ</th>
-                        <th className="p-2.5">Rate (₹)</th>
-                        <th className="p-2.5">Status</th>
-                        <th className="p-2.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {packaging.map((p) => {
-                        const low = p.qty <= p.reorderLevel;
-                        return (
-                          <tr key={p.id} className="hover:bg-slate-50/80">
-                            <td className="p-2.5 font-mono"><span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200 text-[10px]">{p.code}</span></td>
-                            <td className="p-2.5"><span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">{p.type}</span></td>
-                            <td className="p-2.5 font-bold text-slate-900">{p.description}</td>
-                            <td className="p-2.5 text-slate-500 max-w-[150px] truncate">{p.specification || '—'}</td>
-                            <td className="p-2.5 font-mono font-bold">{p.qty}</td>
-                            <td className="p-2.5">{p.unit}</td>
-                            <td className="p-2.5 text-slate-500 text-[11px]">{p.linkedSkus || '—'}</td>
-                            <td className="p-2.5 text-slate-600">{p.supplier || '—'}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{p.moq || '—'}</td>
-                            <td className="p-2.5 font-mono text-slate-900 font-bold">₹{p.lastPurchaseRate || 0}</td>
-                            <td className="p-2.5">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${low ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                {low ? 'Low Stock' : 'OK'}
-                              </span>
-                            </td>
-                            <td className="p-2.5 text-right">
-                              <button
-                                onClick={() => handleDeletePM(p.id, p.description)}
-                                className="text-red-500 hover:text-red-700 p-1 text-xs"
-                              >
-                                🗑
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 6. MOVEMENTS PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'movements' && (
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">🔄 GRN & Material Issues</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">All inward and outward stock movements</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setModalIssue(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg shadow-2xs"
-                  >
-                    ↓ Issue Material
-                  </button>
-                  <button
-                    onClick={() => setModalGrn(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-2xs"
-                  >
-                    + New GRN
-                  </button>
-                </div>
-              </div>
-
-              {/* TABS */}
-              <div className="flex gap-2 border-b border-slate-200">
-                <button
-                  onClick={() => setMovementTab('grn')}
-                  className={`pb-2 text-xs font-bold border-b-2 px-1 transition-all ${
-                    movementTab === 'grn' ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  GRN (Inward)
-                </button>
-                <button
-                  onClick={() => setMovementTab('issue')}
-                  className={`pb-2 text-xs font-bold border-b-2 px-1 transition-all ${
-                    movementTab === 'issue' ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Material Issues (Outward)
-                </button>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-2.5">Ref No.</th>
-                        <th className="p-2.5">Date</th>
-                        <th className="p-2.5">Category</th>
-                        <th className="p-2.5">Item</th>
-                        <th className="p-2.5">Qty</th>
-                        <th className="p-2.5">Unit</th>
-                        <th className="p-2.5">{movementTab === 'grn' ? 'Supplier' : 'Issued To'}</th>
-                        <th className="p-2.5">{movementTab === 'grn' ? 'Invoice / Batch' : 'Remarks'}</th>
-                        <th className="p-2.5">User</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {movements
-                        .filter((m) => (movementTab === 'grn' ? m.type === 'GRN' : m.type === 'ISSUE'))
-                        .map((m) => (
-                          <tr key={m.id} className="hover:bg-slate-50/80">
-                            <td className="p-2.5 font-mono font-bold text-slate-900">{m.refNumber}</td>
-                            <td className="p-2.5 font-mono text-slate-600">{new Date(m.movementDate).toISOString().split('T')[0]}</td>
-                            <td className="p-2.5"><span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-semibold">{m.category}</span></td>
-                            <td className="p-2.5 font-bold text-slate-900">{m.itemTitle}</td>
-                            <td className="p-2.5 font-mono font-bold">{m.qty}</td>
-                            <td className="p-2.5">{m.unit}</td>
-                            <td className="p-2.5 text-slate-600">{m.party || '—'}</td>
-                            <td className="p-2.5 font-mono text-slate-500">{m.invoiceRef || m.remarks || '—'}</td>
-                            <td className="p-2.5 text-slate-500">{m.performedBy}</td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 7. PURCHASE ORDERS PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'purchase-orders' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">🛒 Purchase Order Suggestions</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">Auto-generated recommendations based on dynamic reorder points</p>
-                </div>
-                <button
-                  onClick={loadData}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-2xs"
-                >
-                  ⟳ Refresh Suggestions
-                </button>
-              </div>
-
-              {poSuggestions.length > 0 ? (
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs font-medium">
-                    ⚠️ {poSuggestions.length} item(s) require replenishment based on current stock vs. reorder levels.
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">Category</th>
-                          <th className="p-2.5">Code</th>
-                          <th className="p-2.5">Item Name</th>
-                          <th className="p-2.5">Current Stock</th>
-                          <th className="p-2.5">Reorder Level</th>
-                          <th className="p-2.5">Suggested Order</th>
-                          <th className="p-2.5">Supplier</th>
-                          <th className="p-2.5">Lead Time</th>
-                          <th className="p-2.5">Est. Value (₹)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {poSuggestions.map((po) => (
-                          <tr key={po.id} className="hover:bg-slate-50">
-                            <td className="p-2.5"><span className="bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded text-[10px]">{po.category}</span></td>
-                            <td className="p-2.5 font-mono">{po.code}</td>
-                            <td className="p-2.5 font-bold text-slate-900">{po.name}</td>
-                            <td className="p-2.5 font-mono text-red-600 font-bold">{po.qty} {po.unit}</td>
-                            <td className="p-2.5 font-mono">{po.reorderLevel} {po.unit}</td>
-                            <td className="p-2.5 font-mono font-bold text-[#1D9E75]">{po.suggestQty} {po.unit}</td>
-                            <td className="p-2.5 text-slate-700">{po.supplier}</td>
-                            <td className="p-2.5 text-slate-600">{po.leadTimeDays ? `${po.leadTimeDays} days` : '—'}</td>
-                            <td className="p-2.5 font-mono font-bold text-slate-900">₹{po.estValue.toLocaleString('en-IN')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-8 text-center text-emerald-900 font-medium text-sm">
-                  ✅ No purchase orders needed at this time. All stock levels are above reorder points.
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 8. REPORTS PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'reports' && (
-            <div className="space-y-4">
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">📋 Reports & Analytics</h1>
-                <p className="text-xs text-slate-500 mt-0.5">Inventory analytics, valuation summaries, and aging logs</p>
-              </div>
-
-              {/* REPORT TABS */}
-              <div className="flex gap-2 border-b border-slate-200">
-                {(['summary', 'valuation', 'consumption', 'aging'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setReportTab(tab)}
-                    className={`pb-2 text-xs font-bold border-b-2 px-2 capitalize transition-all ${
-                      reportTab === tab ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-
-              {reportTab === 'summary' && (
+          ) : (
+            <>
+              {/* ======================================================== */}
+              {/* 1. INVENTORY: RAW MATERIALS (RM) TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'raw-materials' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">RM SKUs</div>
-                      <div className="text-xl font-bold text-slate-900">{rawMaterials.length}</div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Wheat className="w-5 h-5 text-[#1D9E75]" /> Raw Materials Inventory (RM)
+                      </h2>
+                      <p className="text-xs text-slate-400">Master stock levels, batches, and inward shipments for existing raw materials</p>
                     </div>
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">FG Units Stock</div>
-                      <div className="text-xl font-bold text-slate-900">{totalFGStock.toLocaleString('en-IN')}</div>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Packaging SKUs</div>
-                      <div className="text-xl font-bold text-slate-900">{packaging.length}</div>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-xl p-4">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase">Total Movements</div>
-                      <div className="text-xl font-bold text-slate-900">{movements.length}</div>
-                    </div>
+                    <button
+                      onClick={() => setModalInwardRm(true)}
+                      className="bg-[#1D9E75] hover:bg-[#168361] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <ArrowDownRight className="w-4 h-4" /> Log Inward / Arrived RM
+                    </button>
                   </div>
 
-                  <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                    <div className="p-3 bg-slate-50 font-bold text-xs">Raw Material Stock Summary</div>
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100/70 border-b border-slate-200 font-semibold">
-                        <tr>
-                          <th className="p-2.5">Code</th>
-                          <th className="p-2.5">Material</th>
-                          <th className="p-2.5">Stock</th>
-                          <th className="p-2.5">Unit</th>
-                          <th className="p-2.5">Supplier</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {rawMaterials.map((r) => (
-                          <tr key={r.id}>
-                            <td className="p-2.5 font-mono">{r.code}</td>
-                            <td className="p-2.5 font-bold">{r.name}</td>
-                            <td className="p-2.5 font-mono">{r.qty}</td>
-                            <td className="p-2.5">{r.unit}</td>
-                            <td className="p-2.5 text-slate-600">{r.supplierName || '—'}</td>
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">Code</th>
+                            <th className="p-3">Material Name</th>
+                            <th className="p-3">Brand Name</th>
+                            <th className="p-3">Batch No</th>
+                            <th className="p-3 text-right">Stock</th>
+                            <th className="p-3">Unit</th>
+                            <th className="p-3 text-right">Reorder Level</th>
+                            <th className="p-3 text-right">Max Stock</th>
+                            <th className="p-3">Supplier</th>
+                            <th className="p-3">Location</th>
+                            <th className="p-3">Expiring</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-center">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {reportTab === 'valuation' && (
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs p-4">
-                  <div className="mb-4">
-                    <div className="text-xs font-bold text-slate-500 uppercase">Total Inventory Valuation</div>
-                    <div className="text-3xl font-bold text-[#1D9E75] font-mono mt-1">₹{totalRMValuation.toLocaleString('en-IN')}</div>
-                  </div>
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/70 border-b border-slate-200 font-semibold">
-                      <tr>
-                        <th className="p-2.5">Code</th>
-                        <th className="p-2.5">Material</th>
-                        <th className="p-2.5">Qty</th>
-                        <th className="p-2.5">Rate (₹)</th>
-                        <th className="p-2.5">Total Value (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {rawMaterials.map((r) => {
-                        const val = r.qty * (r.lastPurchaseRate || 0);
-                        return (
-                          <tr key={r.id}>
-                            <td className="p-2.5 font-mono">{r.code}</td>
-                            <td className="p-2.5 font-bold">{r.name}</td>
-                            <td className="p-2.5 font-mono">{r.qty} {r.unit}</td>
-                            <td className="p-2.5 font-mono">₹{r.lastPurchaseRate || 0}</td>
-                            <td className="p-2.5 font-mono font-bold">₹{val.toLocaleString('en-IN')}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {reportTab === 'aging' && (
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <div className="p-3 bg-slate-50 font-bold text-xs">Finished Goods Aging Report</div>
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/70 border-b border-slate-200 font-semibold">
-                      <tr>
-                        <th className="p-2.5">SKU</th>
-                        <th className="p-2.5">Product</th>
-                        <th className="p-2.5">Batch</th>
-                        <th className="p-2.5">Stock</th>
-                        <th className="p-2.5">Days to Expiry</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {reportsData?.fgAging?.map((f: any) => (
-                        <tr key={f.id}>
-                          <td className="p-2.5 font-mono">{f.sku}</td>
-                          <td className="p-2.5 font-bold">{f.name}</td>
-                          <td className="p-2.5 font-mono">{f.batchNumber}</td>
-                          <td className="p-2.5 font-mono">{f.stock} {f.unit}</td>
-                          <td className="p-2.5 font-mono font-bold text-amber-600">{f.daysLeft}d</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ========================================== */}
-          {/* 9. SETTINGS & ADMIN GOVERNANCE PANEL */}
-          {/* ========================================== */}
-          {activePanel === 'settings' && (
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">⚙️ Admin User & Role Governance</h1>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Discord-style custom roles, authority templates, and staff user management
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setModalLookup(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-2xs"
-                  >
-                    + Add Custom Lookup
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingRole(null);
-                      setModalRole(true);
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs"
-                  >
-                    + Create Custom Role
-                  </button>
-                  <button
-                    onClick={() => setModalUser(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-2xs"
-                  >
-                    + Create Staff User
-                  </button>
-                </div>
-              </div>
-
-              {/* ADMIN GOVERNANCE TABS */}
-              <div className="flex gap-2 border-b border-slate-200">
-                <button
-                  onClick={() => setAdminTab('roles')}
-                  className={`pb-2 text-xs font-bold border-b-2 px-1 transition-all ${
-                    adminTab === 'roles' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Custom Roles & Authorities ({rolesList.length})
-                </button>
-                <button
-                  onClick={() => setAdminTab('users')}
-                  className={`pb-2 text-xs font-bold border-b-2 px-1 transition-all ${
-                    adminTab === 'users' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Staff Accounts ({usersList.length})
-                </button>
-                <button
-                  onClick={() => setAdminTab('lookups')}
-                  className={`pb-2 text-xs font-bold border-b-2 px-1 transition-all ${
-                    adminTab === 'lookups' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Dynamic Lookups & Units
-                </button>
-              </div>
-
-              {/* ROLES MANAGEMENT TAB */}
-              {adminTab === 'roles' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {rolesList.map((role) => (
-                    <div key={role.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-3.5 h-3.5 rounded-full shadow-2xs"
-                            style={{ backgroundColor: role.colorTag || '#3B82F6' }}
-                          />
-                          <h3 className="font-bold text-sm text-slate-900">{role.name}</h3>
-                          {role.isSystemAdmin && (
-                            <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                              System Admin
-                            </span>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {rawMaterials.length === 0 ? (
+                            <tr>
+                              <td colSpan={13} className="p-8 text-center text-slate-500">
+                                No raw materials found in database.
+                              </td>
+                            </tr>
+                          ) : (
+                            rawMaterials.map((rm) => (
+                              <tr key={rm.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-emerald-400">{rm.code}</td>
+                                <td className="p-3 font-semibold text-white">{rm.name}</td>
+                                <td className="p-3">{rm.brand || '—'}</td>
+                                <td className="p-3 font-mono text-slate-400">{rm.batchNumber}</td>
+                                <td className={`p-3 text-right font-bold ${rm.stock <= rm.reorderLevel ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                  {rm.stock}
+                                </td>
+                                <td className="p-3">{rm.unit}</td>
+                                <td className="p-3 text-right font-mono text-slate-400">{rm.reorderLevel}</td>
+                                <td className="p-3 text-right font-mono text-slate-400">{rm.maxStock ?? '—'}</td>
+                                <td className="p-3">{rm.supplier || '—'}</td>
+                                <td className="p-3">{rm.location || '—'}</td>
+                                <td className="p-3">
+                                  {rm.expiryDate ? new Date(rm.expiryDate).toISOString().split('T')[0] : '—'}
+                                </td>
+                                <td className="p-3">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      rm.stock <= rm.reorderLevel
+                                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    }`}
+                                  >
+                                    {rm.status}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleDeleteRM(rm.id, rm.name)}
+                                      className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete Raw Material"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
                           )}
-                          {role.isDefault && (
-                            <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                              Default Template
-                            </span>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 2. INVENTORY: PACKAGED MATERIALS (PM) TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'packaged-materials' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Boxes className="w-5 h-5 text-blue-400" /> Packaged Materials Inventory (PM)
+                      </h2>
+                      <p className="text-xs text-slate-400">Jars, bottles, cartons, caps, and inward shipments for existing packaging supplies</p>
+                    </div>
+                    <button
+                      onClick={() => setModalInwardPm(true)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <ArrowDownRight className="w-4 h-4" /> Log Inward / Arrived PM
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">Code</th>
+                            <th className="p-3">Material Name</th>
+                            <th className="p-3">Brand Name / Type</th>
+                            <th className="p-3">Batch No</th>
+                            <th className="p-3 text-right">Stock</th>
+                            <th className="p-3">Unit</th>
+                            <th className="p-3 text-right">Reorder Level</th>
+                            <th className="p-3 text-right">Max Stock</th>
+                            <th className="p-3">Supplier</th>
+                            <th className="p-3">Location</th>
+                            <th className="p-3">Expiring</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {packagedMaterials.length === 0 ? (
+                            <tr>
+                              <td colSpan={13} className="p-8 text-center text-slate-500">
+                                No packaging materials found in database.
+                              </td>
+                            </tr>
+                          ) : (
+                            packagedMaterials.map((pm) => (
+                              <tr key={pm.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-blue-400">{pm.code}</td>
+                                <td className="p-3 font-semibold text-white">{pm.name}</td>
+                                <td className="p-3">{pm.brand || '—'}</td>
+                                <td className="p-3 font-mono text-slate-400">{pm.batchNumber}</td>
+                                <td className={`p-3 text-right font-bold ${pm.stock <= pm.reorderLevel ? 'text-amber-400' : 'text-blue-400'}`}>
+                                  {pm.stock}
+                                </td>
+                                <td className="p-3">{pm.unit}</td>
+                                <td className="p-3 text-right font-mono text-slate-400">{pm.reorderLevel}</td>
+                                <td className="p-3 text-right font-mono text-slate-400">{pm.maxStock ?? '—'}</td>
+                                <td className="p-3">{pm.supplier || '—'}</td>
+                                <td className="p-3">{pm.location || '—'}</td>
+                                <td className="p-3">
+                                  {pm.expiryDate ? new Date(pm.expiryDate).toISOString().split('T')[0] : '—'}
+                                </td>
+                                <td className="p-3">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      pm.stock <= pm.reorderLevel
+                                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                    }`}
+                                  >
+                                    {pm.status}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleDeletePM(pm.id, pm.name)}
+                                      className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete Packaging Material"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 3. OPERATIONS: RM ISSUE TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'op-rm-issue' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <RefreshCw className="w-5 h-5 text-emerald-400" /> RM Issue
+                      </h2>
+                      <p className="text-xs text-slate-400">Issuing raw materials to production floor (deducts RM stock atomically)</p>
+                    </div>
+                    <button
+                      onClick={() => setModalRmIssue(true)}
+                      className="bg-[#1D9E75] hover:bg-[#168361] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Post RM Issue
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">RM Code</th>
+                            <th className="p-3">Material Name</th>
+                            <th className="p-3">Batch Number</th>
+                            <th className="p-3">Issue For (FG)</th>
+                            <th className="p-3">Expiry Date</th>
+                            <th className="p-3 text-right">Qty in Selected Batch</th>
+                            <th className="p-3 text-right">Issued Stock</th>
+                            <th className="p-3">Issued Date</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {rmIssues.length === 0 ? (
+                            <tr>
+                              <td colSpan={9} className="p-8 text-center text-slate-500">
+                                No RM Issue entries logged yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            rmIssues.map((issue) => (
+                              <tr key={issue.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-emerald-400">{issue.rmCode || '—'}</td>
+                                <td className="p-3 font-semibold text-white">{issue.materialName}</td>
+                                <td className="p-3 font-mono text-slate-400">{issue.batchNumber}</td>
+                                <td className="p-3 font-semibold text-blue-400">{issue.issueFor}</td>
+                                <td className="p-3">
+                                  {issue.expiryDate ? new Date(issue.expiryDate).toISOString().split('T')[0] : '—'}
+                                </td>
+                                <td className="p-3 text-right font-mono text-slate-400">{issue.quantityInBatch}</td>
+                                <td className="p-3 text-right font-bold text-amber-400">-{issue.issuedStock}</td>
+                                <td className="p-3 text-slate-400">
+                                  {new Date(issue.issuedDate).toLocaleDateString()}
+                                </td>
+                                <td className="p-3 text-center">
+                                  <button
+                                    onClick={() => handleDeleteRMIssueItem(issue.id)}
+                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 4. OPERATIONS: PRODUCTION TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'op-production' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Factory className="w-5 h-5 text-amber-400" /> Production
+                      </h2>
+                      <p className="text-xs text-slate-400">Recording FG batch production runs, outputs, and auto-adding stock</p>
+                    </div>
+                    <button
+                      onClick={() => setModalProduction(true)}
+                      className="bg-amber-500 hover:bg-amber-400 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Record Production Run
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">FG Code</th>
+                            <th className="p-3">Finished Good Name</th>
+                            <th className="p-3 text-right">Total Batches Made</th>
+                            <th className="p-3 text-right">Total Output</th>
+                            <th className="p-3 text-right">Wastage</th>
+                            <th className="p-3">Operator</th>
+                            <th className="p-3">Recorded At</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {productionLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-slate-500">
+                                No production runs recorded yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            productionLogs.map((log) => (
+                              <tr key={log.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-amber-400">{log.fgCode}</td>
+                                <td className="p-3 font-semibold text-white">{log.fgName}</td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-200">{log.totalBatchesMade}</td>
+                                <td className="p-3 text-right font-bold text-emerald-400">+{log.totalOutput} {log.unit}</td>
+                                <td className="p-3 text-right text-red-400 font-mono">{log.wastage} {log.unit}</td>
+                                <td className="p-3">{log.operator}</td>
+                                <td className="p-3 text-slate-400">{new Date(log.createdAt).toLocaleString()}</td>
+                                <td className="p-3 text-center">
+                                  <button
+                                    onClick={() => handleDeleteProdLog(log.id)}
+                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 5. OPERATIONS: PACKAGING ISSUE TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'op-packaging-issue' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Box className="w-5 h-5 text-purple-400" /> Packaging Issue
+                      </h2>
+                      <p className="text-xs text-slate-400">Issuing bottles, jars, pouches & cartons for production runs (deducts PM stock)</p>
+                    </div>
+                    <button
+                      onClick={() => setModalPackagingIssue(true)}
+                      className="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Post PM Issue
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">PM Code</th>
+                            <th className="p-3">Material Name</th>
+                            <th className="p-3">Issue For (FG)</th>
+                            <th className="p-3 text-right">Qty in Selected Batch</th>
+                            <th className="p-3 text-right">Issued Quantity</th>
+                            <th className="p-3">Issued Date</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {packagingIssues.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="p-8 text-center text-slate-500">
+                                No Packaging Issue entries logged yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            packagingIssues.map((issue) => (
+                              <tr key={issue.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-purple-400">{issue.pmCode || '—'}</td>
+                                <td className="p-3 font-semibold text-white">{issue.pmName}</td>
+                                <td className="p-3 font-semibold text-blue-400">{issue.issueFor}</td>
+                                <td className="p-3 text-right font-mono text-slate-400">{issue.quantityInBatch}</td>
+                                <td className="p-3 text-right font-bold text-purple-400">-{issue.issuedQty}</td>
+                                <td className="p-3 text-slate-400">{new Date(issue.issuedDate).toLocaleDateString()}</td>
+                                <td className="p-3 text-center">
+                                  <button
+                                    onClick={() => handleDeletePMIssueItem(issue.id)}
+                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 6. OPERATIONS: FINISHED GOODS TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'op-finished-goods' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <PackageCheck className="w-5 h-5 text-blue-400" /> Finished Goods
+                      </h2>
+                      <p className="text-xs text-slate-400">Produced stock batches, shelf-life auto-calculations & warehouse locations</p>
+                    </div>
+                    <button
+                      onClick={() => setModalInwardFg(true)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <ArrowDownRight className="w-4 h-4" /> Log FG Batch Stock
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">SKU</th>
+                            <th className="p-3">Product Name</th>
+                            <th className="p-3">Batch Number</th>
+                            <th className="p-3 text-right">Quantity Produced</th>
+                            <th className="p-3 text-right">Total Stock</th>
+                            <th className="p-3">Unit</th>
+                            <th className="p-3">MFG Date</th>
+                            <th className="p-3">Expiry Date</th>
+                            <th className="p-3 text-center">Shelf Life</th>
+                            <th className="p-3">Location</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {finishedGoods.length === 0 ? (
+                            <tr>
+                              <td colSpan={11} className="p-8 text-center text-slate-500">
+                                No finished goods found in inventory.
+                              </td>
+                            </tr>
+                          ) : (
+                            finishedGoods.map((fg) => (
+                              <tr key={fg.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-blue-400">{fg.sku}</td>
+                                <td className="p-3 font-semibold text-white">{fg.name}</td>
+                                <td className="p-3 font-mono text-slate-400">{fg.batchNumber}</td>
+                                <td className="p-3 text-right font-mono text-slate-300">{fg.quantityProduced}</td>
+                                <td className="p-3 text-right font-bold text-emerald-400">{fg.totalStock}</td>
+                                <td className="p-3">{fg.unit}</td>
+                                <td className="p-3">{new Date(fg.mfgDate).toISOString().split('T')[0]}</td>
+                                <td className="p-3">{new Date(fg.expiryDate).toISOString().split('T')[0]}</td>
+                                <td className="p-3 text-center font-bold text-emerald-400">{fg.shelfLifeDays} days</td>
+                                <td className="p-3">{fg.location || '—'}</td>
+                                <td className="p-3 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => handleDeleteFG(fg.id, fg.name)}
+                                      className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete Finished Good"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 7. OPERATIONS: DISPATCH TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'op-dispatch' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Truck className="w-5 h-5 text-indigo-400" /> Dispatch
+                      </h2>
+                      <p className="text-xs text-slate-400">Sales dispatch logs, COA status & party delivery records (deducts FG stock)</p>
+                    </div>
+                    <button
+                      onClick={() => setModalDispatch(true)}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Post Dispatch
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">SKU Code</th>
+                            <th className="p-3">Product Name</th>
+                            <th className="p-3">Batch Code</th>
+                            <th className="p-3 text-right">Dispatch Qty</th>
+                            <th className="p-3">Dispatch Date</th>
+                            <th className="p-3">Party Name</th>
+                            <th className="p-3">MFG</th>
+                            <th className="p-3">EXP</th>
+                            <th className="p-3">Location</th>
+                            <th className="p-3">COA</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {dispatches.length === 0 ? (
+                            <tr>
+                              <td colSpan={11} className="p-8 text-center text-slate-500">
+                                No dispatch entries logged yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            dispatches.map((disp) => (
+                              <tr key={disp.id} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-mono font-bold text-indigo-400">{disp.skuCode || '—'}</td>
+                                <td className="p-3 font-semibold text-white">{disp.productName}</td>
+                                <td className="p-3 font-mono text-slate-400">{disp.batchCode}</td>
+                                <td className="p-3 text-right font-bold text-[#1D9E75]">-{disp.dispatchQty}</td>
+                                <td className="p-3 text-slate-400">{new Date(disp.dispatchDate).toLocaleDateString()}</td>
+                                <td className="p-3 font-semibold text-white">{disp.partyName}</td>
+                                <td className="p-3">{new Date(disp.mfgDate).toISOString().split('T')[0]}</td>
+                                <td className="p-3">{new Date(disp.expiryDate).toISOString().split('T')[0]}</td>
+                                <td className="p-3">{disp.location || '—'}</td>
+                                <td className="p-3">
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                    {disp.coaStatus}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <button
+                                    onClick={() => handleDeleteDispatchLog(disp.id)}
+                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 8. MASTER ENTRY HUB: ADD MATERIALS / ITEMS */}
+              {/* ======================================================== */}
+              {activePanel === 'add-materials' && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <PlusCircle className="w-5 h-5 text-[#1D9E75]" /> Add Materials / Master Entry Hub
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      Centralized workspace to define brand new materials and catalog SKUs
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Add NEW RM Master Card */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-[#1D9E75] transition-all flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
+                          <Wheat className="w-5 h-5" /> Add Brand New Raw Material (Master)
+                        </div>
+                        <p className="text-xs text-slate-400">Create a brand new RM SKU with code, brand name, unit, and reorder levels</p>
+                      </div>
+                      <button
+                        onClick={() => setModalNewRm(true)}
+                        className="mt-4 w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Create New RM Master
+                      </button>
+                    </div>
+
+                    {/* Add NEW PM Master Card */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-500 transition-all flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-blue-400 font-bold text-base">
+                          <Boxes className="w-5 h-5" /> Add Brand New Packaging (Master)
+                        </div>
+                        <p className="text-xs text-slate-400">Create a brand new bottle, jar, carton, or packaging SKU catalog record</p>
+                      </div>
+                      <button
+                        onClick={() => setModalNewPm(true)}
+                        className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Create New PM Master
+                      </button>
+                    </div>
+
+                    {/* Add NEW FG Master Card */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-400 transition-all flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-blue-400 font-bold text-base">
+                          <PackageCheck className="w-5 h-5" /> Add Brand New Finished Good (Master)
+                        </div>
+                        <p className="text-xs text-slate-400">Register a new manufactured product SKU, shelf-life, and storage guidelines</p>
+                      </div>
+                      <button
+                        onClick={() => setModalNewFg(true)}
+                        className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Create New FG Master
+                      </button>
+                    </div>
+
+                    {/* Quick Action: Post RM Issue */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-emerald-500 transition-all flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
+                          <RefreshCw className="w-5 h-5" /> Post RM Issue to Production
+                        </div>
+                        <p className="text-xs text-slate-400">Deduct raw material batch stock for a factory batch run</p>
+                      </div>
+                      <button
+                        onClick={() => setModalRmIssue(true)}
+                        className="mt-4 w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Post RM Issue
+                      </button>
+                    </div>
+
+                    {/* Quick Action: Record Production Run */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-amber-500 transition-all flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
+                          <Factory className="w-5 h-5" /> Record Factory Production Run
+                        </div>
+                        <p className="text-xs text-slate-400">Record produced batches and automatically update FG inventory stock</p>
+                      </div>
+                      <button
+                        onClick={() => setModalProduction(true)}
+                        className="mt-4 w-full bg-amber-500 hover:bg-amber-400 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Record Production
+                      </button>
+                    </div>
+
+                    {/* Quick Action: Post Customer Dispatch */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-indigo-500 transition-all flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-indigo-400 font-bold text-base">
+                          <Truck className="w-5 h-5" /> Post Customer Dispatch
+                        </div>
+                        <p className="text-xs text-slate-400">Dispatch finished goods orders to distributors and retail clients</p>
+                      </div>
+                      <button
+                        onClick={() => setModalDispatch(true)}
+                        className="mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Post Sales Dispatch
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 9. ADMIN: DISCORD-STYLE ROLES & PERMISSIONS */}
+              {/* ======================================================== */}
+              {activePanel === 'admin-roles' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <ShieldCheck className="w-5 h-5 text-emerald-400" /> Discord-Style Roles & Permissions
+                      </h2>
+                      <p className="text-xs text-slate-400">Color-tagged roles with modular granular authority flags</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingRole(null);
+                        setModalRole(true);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Create Custom Role
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {rolesList.map((role) => (
+                      <div
+                        key={role.id}
+                        className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 space-y-3 hover:border-slate-500 transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow-sm"
+                                style={{ backgroundColor: role.colorTag || '#1D9E75' }}
+                              />
+                              <h3 className="font-bold text-sm text-white">{role.name}</h3>
+                            </div>
+                            {role.isSystemAdmin ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                System Admin
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {role.users?.length || 0} users
+                              </span>
+                            )}
+                          </div>
+                          {role.description && (
+                            <p className="text-xs text-slate-400 mt-2 line-clamp-2">{role.description}</p>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              setEditingRole(role);
-                              setModalRole(true);
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1 bg-blue-50 rounded-md"
-                          >
-                            Edit Authorities
-                          </button>
-                          {!role.isSystemAdmin && (
+                        <div className="pt-3 border-t border-[#1E2F4A] flex items-center justify-between">
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {role.isSystemAdmin ? 'Full Access' : `${role.permissions?.length || 0} permissions`}
+                          </span>
+                          <div className="flex items-center gap-1.5">
                             <button
-                              onClick={() => handleDeleteRoleItem(role.id, role.name)}
-                              className="text-xs text-red-500 hover:text-red-700 p-1"
-                              title="Delete Role"
+                              onClick={() => {
+                                setEditingRole(role);
+                                setModalRole(true);
+                              }}
+                              className="p-1 rounded text-slate-300 hover:bg-[#162440] hover:text-white cursor-pointer"
+                              title="Edit Role"
                             >
-                              🗑
+                              <Edit className="w-4 h-4" />
                             </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-slate-500">{role.description || 'No description provided.'}</p>
-
-                      <div className="text-[11px] font-mono text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex items-center justify-between">
-                        <span>Staff Assigned: <strong>{role._count?.users || 0}</strong></span>
-                        <span>Granted Privileges: <strong>{role.isSystemAdmin ? 'All (*)' : `${role.rolePermissions?.length || 0}`}</strong></span>
-                      </div>
-
-                      {/* PERMISSION BADGES LIST */}
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {role.isSystemAdmin ? (
-                          <span className="bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                            FULL ADMIN SUPERUSER PRIVILEGES
-                          </span>
-                        ) : role.rolePermissions && role.rolePermissions.length > 0 ? (
-                          role.rolePermissions.slice(0, 6).map((rp: any) => (
-                            <span key={rp.id} className="bg-slate-100 text-slate-700 text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200">
-                              {rp.permission.label}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic">No permissions assigned</span>
-                        )}
-                        {role.rolePermissions && role.rolePermissions.length > 6 && (
-                          <span className="text-[10px] font-bold text-blue-600 self-center">
-                            +{role.rolePermissions.length - 6} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* USERS MANAGEMENT TAB */}
-              {adminTab === 'users' && (
-                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-2.5">Staff Name</th>
-                        <th className="p-2.5">Email</th>
-                        <th className="p-2.5">Username</th>
-                        <th className="p-2.5">Assigned Role</th>
-                        <th className="p-2.5">Password Status</th>
-                        <th className="p-2.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {usersList.map((u) => (
-                        <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-2.5 font-bold text-slate-900">{u.name}</td>
-                          <td className="p-2.5 font-mono text-slate-600">{u.email}</td>
-                          <td className="p-2.5 font-mono font-bold text-emerald-700">@{u.username}</td>
-                          <td className="p-2.5">
-                            <span
-                              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white shadow-2xs"
-                              style={{ backgroundColor: u.role?.colorTag || '#3B82F6' }}
-                            >
-                              {u.role?.name || 'Unassigned'}
-                            </span>
-                          </td>
-                          <td className="p-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${u.isPasswordSet ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                              {u.isPasswordSet ? 'Password Active' : '⏳ Pending First Login Setup'}
-                            </span>
-                          </td>
-                          <td className="p-2.5 text-right">
-                            {!u.role?.isSystemAdmin && (
+                            {!role.isSystemAdmin && (
                               <button
-                                onClick={() => handleDeleteUserItem(u.id, u.name)}
-                                className="text-red-500 hover:text-red-700 p-1 text-xs"
+                                onClick={() => handleDeleteRoleItem(role.id, role.name)}
+                                className="p-1 rounded text-red-400 hover:bg-red-500/20 cursor-pointer"
+                                title="Delete Role"
                               >
-                                🗑
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* LOOKUPS MANAGEMENT TAB */}
-              {adminTab === 'lookups' && (
-                <div className="space-y-4">
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-                    <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Configured Unit Types</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {units.map((u) => (
-                        <span key={u.id} className="bg-slate-100 border border-slate-200 px-3 py-1 rounded-lg text-xs font-mono font-medium text-slate-700">
-                          {u.label} ({u.code})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-                    <h3 className="font-bold text-xs text-slate-800 uppercase tracking-wider">Storage Zones / Cold Vaults</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {locations.map((loc) => (
-                        <div key={loc.id} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                          <div className="font-bold text-slate-900">{loc.name}</div>
-                          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Zone: {loc.zone} | Temp: {loc.tempSpec || 'Ambient'}</div>
+                          </div>
                         </div>
-                      ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 10. ADMIN: STAFF USERS PROVISIONING */}
+              {/* ======================================================== */}
+              {activePanel === 'admin-users' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Users className="w-5 h-5 text-blue-400" /> Staff Members & Accounts
+                      </h2>
+                      <p className="text-xs text-slate-400">User accounts, roles, and authorization management</p>
+                    </div>
+                    <button
+                      onClick={() => setModalUser(true)}
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" /> Add Staff Member
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">Staff Name</th>
+                            <th className="p-3">Username</th>
+                            <th className="p-3">Assigned Role</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3">Created</th>
+                            <th className="p-3 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {usersList.map((u) => (
+                            <tr key={u.id} className="hover:bg-[#162440]/50 transition-all">
+                              <td className="p-3 font-semibold text-white">{u.name}</td>
+                              <td className="p-3 font-mono text-slate-400">@{u.username}</td>
+                              <td className="p-3">
+                                {u.role ? (
+                                  <span
+                                    className="px-2 py-0.5 rounded text-[10px] font-bold text-white inline-flex items-center gap-1.5"
+                                    style={{ backgroundColor: `${u.role.colorTag || '#1D9E75'}33`, color: u.role.colorTag || '#1D9E75' }}
+                                  >
+                                    <span
+                                      className="w-2 h-2 rounded-full inline-block"
+                                      style={{ backgroundColor: u.role.colorTag || '#1D9E75' }}
+                                    />
+                                    {u.role.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500 font-italic">No role</span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                  Active
+                                </span>
+                              </td>
+                              <td className="p-3 text-slate-400">{new Date(u.createdAt).toLocaleDateString()}</td>
+                              <td className="p-3 text-center">
+                                {u.username !== 'admin' && (
+                                  <button
+                                    onClick={() => handleDeleteUserItem(u.id, u.name)}
+                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
               )}
-            </div>
+
+              {/* ======================================================== */}
+              {/* 11. DASHBOARD & PIPELINE OVERVIEW */}
+              {/* ======================================================== */}
+              {activePanel === 'dashboard' && (
+                <div className="space-y-6">
+                  {/* Pipeline Quick Access Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                    <div
+                      onClick={() => setActivePanel('raw-materials')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <Wheat className="w-3.5 h-3.5 text-emerald-400" /> RM Items
+                      </div>
+                      <div className="text-xl font-bold text-white">{rawMaterials.length}</div>
+                      <div className="text-[10px] text-emerald-400 font-mono">
+                        {lowRmCount > 0 ? `${lowRmCount} Low Stock` : 'Optimal'}
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivePanel('packaged-materials')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <Boxes className="w-3.5 h-3.5 text-blue-400" /> PM Items
+                      </div>
+                      <div className="text-xl font-bold text-white">{packagedMaterials.length}</div>
+                      <div className="text-[10px] text-blue-400 font-mono">
+                        {lowPmCount > 0 ? `${lowPmCount} Low Stock` : 'Optimal'}
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivePanel('op-rm-issue')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <RefreshCw className="w-3.5 h-3.5 text-emerald-400" /> RM Issues
+                      </div>
+                      <div className="text-xl font-bold text-white">{rmIssues.length}</div>
+                      <div className="text-[10px] text-slate-400">Total Issued</div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivePanel('op-production')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-amber-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <Factory className="w-3.5 h-3.5 text-amber-400" /> Production
+                      </div>
+                      <div className="text-xl font-bold text-white">{productionLogs.length}</div>
+                      <div className="text-[10px] text-amber-400 font-mono">
+                        {productionLogs.reduce((acc, p) => acc + (p.totalOutput || 0), 0)} Output
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivePanel('op-packaging-issue')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-purple-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <Box className="w-3.5 h-3.5 text-purple-400" /> Packaging Issues
+                      </div>
+                      <div className="text-xl font-bold text-white">{packagingIssues.length}</div>
+                      <div className="text-[10px] text-slate-400">Packaging Out</div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivePanel('op-finished-goods')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-400 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <PackageCheck className="w-3.5 h-3.5 text-blue-400" /> Finished Goods
+                      </div>
+                      <div className="text-xl font-bold text-white">{finishedGoods.length}</div>
+                      <div className="text-[10px] text-emerald-400 font-mono">
+                        {finishedGoods.reduce((acc, f) => acc + (f.totalStock || 0), 0)} Units
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => setActivePanel('op-dispatch')}
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-indigo-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                    >
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                        <Truck className="w-3.5 h-3.5 text-indigo-400" /> Dispatches
+                      </div>
+                      <div className="text-xl font-bold text-white">{dispatches.length}</div>
+                      <div className="text-[10px] text-indigo-400 font-mono">
+                        {dispatches.reduce((acc, d) => acc + (d.dispatchQty || 0), 0)} Dispatched
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Production & Dispatch Overview */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Recent Production Logs */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Factory className="w-4 h-4 text-amber-400" /> Recent Production Runs
+                        </h3>
+                        <button
+                          onClick={() => setActivePanel('op-production')}
+                          className="text-[11px] text-amber-400 hover:underline cursor-pointer"
+                        >
+                          View All →
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {productionLogs.slice(0, 4).map((log) => (
+                          <div
+                            key={log.id}
+                            className="bg-[#162440]/60 border border-[#2A3F66] p-3 rounded-lg flex items-center justify-between text-xs"
+                          >
+                            <div>
+                              <div className="font-bold text-white">{log.fgName}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                Code: {log.fgCode} | Batches: {log.totalBatchesMade}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-bold text-emerald-400">+{log.totalOutput} {log.unit}</span>
+                              <div className="text-[10px] text-slate-400">
+                                {new Date(log.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Recent Dispatches */}
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-indigo-400" /> Recent Dispatches
+                        </h3>
+                        <button
+                          onClick={() => setActivePanel('op-dispatch')}
+                          className="text-[11px] text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          View All →
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {dispatches.slice(0, 4).map((disp) => (
+                          <div
+                            key={disp.id}
+                            className="bg-[#162440]/60 border border-[#2A3F66] p-3 rounded-lg flex items-center justify-between text-xs"
+                          >
+                            <div>
+                              <div className="font-bold text-white">{disp.productName}</div>
+                              <div className="text-[10px] text-slate-400">Party: {disp.partyName}</div>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-bold text-[#1D9E75]">-{disp.dispatchQty}</span>
+                              <div className="text-[10px] text-slate-400">
+                                {new Date(disp.dispatchDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 12. PO SUGGESTIONS TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'po-suggestions' && (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-400" /> Purchase Order (PO) Suggestions
+                    </h2>
+                    <p className="text-xs text-slate-400">Automated replenishment suggestions based on reorder thresholds</p>
+                  </div>
+
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
+                            <th className="p-3">Type</th>
+                            <th className="p-3">Code</th>
+                            <th className="p-3">Item Name</th>
+                            <th className="p-3 text-right">Current Stock</th>
+                            <th className="p-3 text-right">Reorder Level</th>
+                            <th className="p-3 text-right">Suggested PO Qty</th>
+                            <th className="p-3">Supplier</th>
+                            <th className="p-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
+                          {poSuggestions.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-8 text-center text-slate-500">
+                                All inventory levels are above reorder thresholds. No POs needed.
+                              </td>
+                            </tr>
+                          ) : (
+                            poSuggestions.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-[#162440]/50 transition-all">
+                                <td className="p-3 font-semibold text-white">{item.type}</td>
+                                <td className="p-3 font-mono font-bold text-amber-400">{item.code}</td>
+                                <td className="p-3 font-semibold text-white">{item.name}</td>
+                                <td className="p-3 text-right font-bold text-amber-400 font-mono">
+                                  {item.currentStock} {item.unit}
+                                </td>
+                                <td className="p-3 text-right font-mono text-slate-400">
+                                  {item.reorderLevel} {item.unit}
+                                </td>
+                                <td className="p-3 text-right font-bold text-emerald-400 font-mono">
+                                  +{item.suggestedPOQty} {item.unit}
+                                </td>
+                                <td className="p-3">{item.supplier || '—'}</td>
+                                <td className="p-3">
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                    Needs Reorder
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 13. REPORTS TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'reports' && reportsData && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-blue-400" /> MES Factory Reports & Summaries
+                    </h2>
+                    <p className="text-xs text-slate-400">Inventory valuation, turnover ratios, production yields & dispatch rates</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                      <div className="text-xs text-slate-400 font-medium">Total Raw Materials Stock</div>
+                      <div className="text-2xl font-bold text-emerald-400">
+                        {reportsData.summary?.totalRMStock || 0} KG
+                      </div>
+                    </div>
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                      <div className="text-xs text-slate-400 font-medium">Total Packaging Stock</div>
+                      <div className="text-2xl font-bold text-blue-400">
+                        {reportsData.summary?.totalPMStock || 0} Units
+                      </div>
+                    </div>
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                      <div className="text-xs text-slate-400 font-medium">Finished Goods Inventory</div>
+                      <div className="text-2xl font-bold text-amber-400">
+                        {reportsData.summary?.totalFGStock || 0} Units
+                      </div>
+                    </div>
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                      <div className="text-xs text-slate-400 font-medium">Total Lifetime Dispatches</div>
+                      <div className="text-2xl font-bold text-indigo-400">
+                        {reportsData.summary?.totalDispatched || 0} Units
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* 14. ALERTS TAB */}
+              {/* ======================================================== */}
+              {activePanel === 'alerts' && (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-400" /> Factory Floor Real-time Alerts
+                    </h2>
+                    <p className="text-xs text-slate-400">Critical reorder warnings, low stock and quality notices</p>
+                  </div>
+
+                  {totalAlertsCount === 0 ? (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-8 rounded-xl text-center text-emerald-300">
+                      <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
+                      <div className="font-bold text-base text-white">All Inventory Healthy</div>
+                      <p className="text-xs mt-1">No raw or packaged materials are below reorder thresholds.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {rawMaterials
+                        .filter((r) => r.stock <= r.reorderLevel)
+                        .map((r) => (
+                          <div
+                            key={r.id}
+                            className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl flex items-center justify-between text-amber-300"
+                          >
+                            <div className="space-y-1">
+                              <div className="font-bold text-sm text-white">
+                                Low Stock: {r.name} ({r.code})
+                              </div>
+                              <div className="text-xs">
+                                Current Stock: <strong>{r.stock} {r.unit}</strong> | Reorder Threshold:{' '}
+                                <strong>{r.reorderLevel} {r.unit}</strong>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setActivePanel('po-suggestions')}
+                              className="bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-400 transition-all cursor-pointer"
+                            >
+                              Generate PO
+                            </button>
+                          </div>
+                        ))}
+
+                      {packagedMaterials
+                        .filter((p) => p.stock <= p.reorderLevel)
+                        .map((p) => (
+                          <div
+                            key={p.id}
+                            className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl flex items-center justify-between text-blue-300"
+                          >
+                            <div className="space-y-1">
+                              <div className="font-bold text-sm text-white">
+                                Low Packaging Stock: {p.name} ({p.code})
+                              </div>
+                              <div className="text-xs">
+                                Current Stock: <strong>{p.stock} {p.unit}</strong> | Reorder Threshold:{' '}
+                                <strong>{p.reorderLevel} {p.unit}</strong>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setActivePanel('po-suggestions')}
+                              className="bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-blue-400 transition-all cursor-pointer"
+                            >
+                              Generate PO
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
 
-      {/* MODALS */}
-      <AddRawMaterialModal
-        isOpen={modalRm}
-        onClose={() => setModalRm(false)}
-        units={units}
-        locations={locations}
-        coaStatuses={coaStatuses}
-        onSuccess={loadData}
-      />
+      {/* ======================================================== */}
+      {/* ALL MODAL DIALOGS */}
+      {/* ======================================================== */}
 
-      <AddFinishedGoodModal
-        isOpen={modalFg}
-        onClose={() => setModalFg(false)}
-        units={units}
-        locations={locations}
-        tempConditions={tempConditions}
+      {/* 1. MASTER ADDITION MODALS (Catalog Master Items) */}
+      <AddRawMaterialModal
+        isOpen={modalNewRm}
+        onClose={() => setModalNewRm(false)}
         onSuccess={loadData}
       />
 
       <AddPackagingModal
-        isOpen={modalPm}
-        onClose={() => setModalPm(false)}
-        units={units}
-        packagingTypes={packagingTypes}
+        isOpen={modalNewPm}
+        onClose={() => setModalNewPm(false)}
         onSuccess={loadData}
       />
 
-      <GRNModal
-        isOpen={modalGrn}
-        onClose={() => setModalGrn(false)}
+      <AddFinishedGoodModal
+        isOpen={modalNewFg}
+        onClose={() => setModalNewFg(false)}
+        onSuccess={loadData}
+      />
+
+      {/* 2. TAB-SPECIFIC INWARD / EXISTING ITEM MODALS */}
+      <InwardRawMaterialModal
+        isOpen={modalInwardRm}
+        onClose={() => setModalInwardRm(false)}
         rawMaterials={rawMaterials}
-        packaging={packaging}
-        coaStatuses={coaStatuses}
         onSuccess={loadData}
       />
 
+      <InwardPackagingModal
+        isOpen={modalInwardPm}
+        onClose={() => setModalInwardPm(false)}
+        packagingMaterials={packagedMaterials}
+        onSuccess={loadData}
+      />
+
+      <InwardFinishedGoodModal
+        isOpen={modalInwardFg}
+        onClose={() => setModalInwardFg(false)}
+        finishedGoods={finishedGoods}
+        onSuccess={loadData}
+      />
+
+      {/* 3. OPERATIONS MODALS (Pipeline Actions) */}
       <IssueModal
-        isOpen={modalIssue}
-        onClose={() => setModalIssue(false)}
+        isOpen={modalRmIssue}
+        onClose={() => setModalRmIssue(false)}
         rawMaterials={rawMaterials}
-        packaging={packaging}
+        finishedGoods={finishedGoods}
+        onSuccess={loadData}
+      />
+
+      <ProductionModal
+        isOpen={modalProduction}
+        onClose={() => setModalProduction(false)}
+        finishedGoods={finishedGoods}
+        onSuccess={loadData}
+      />
+
+      <PackagingIssueModal
+        isOpen={modalPackagingIssue}
+        onClose={() => setModalPackagingIssue(false)}
+        packagingMaterials={packagedMaterials}
         finishedGoods={finishedGoods}
         onSuccess={loadData}
       />
@@ -1395,26 +1576,15 @@ export default function Home() {
         onSuccess={loadData}
       />
 
-      <AddLookupModal
-        isOpen={modalLookup}
-        onClose={() => setModalLookup(false)}
-        onSuccess={loadData}
-      />
-
-      <LoginModal
-        isOpen={modalLogin}
-        onClose={() => setModalLogin(false)}
-        onSuccess={loadData}
-      />
-
+      {/* 4. ADMIN & AUTH MODALS */}
       <RoleManagerModal
         isOpen={modalRole}
         onClose={() => {
-          setModalRole(false);
           setEditingRole(null);
+          setModalRole(false);
         }}
-        permissions={permissionsList}
         editingRole={editingRole}
+        permissions={permissionsList}
         onSuccess={loadData}
       />
 
@@ -1423,6 +1593,12 @@ export default function Home() {
         onClose={() => setModalUser(false)}
         roles={rolesList}
         permissions={permissionsList}
+        onSuccess={loadData}
+      />
+
+      <LoginModal
+        isOpen={modalLogin}
+        onClose={() => setModalLogin(false)}
         onSuccess={loadData}
       />
     </div>

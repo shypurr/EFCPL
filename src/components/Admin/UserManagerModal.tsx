@@ -15,8 +15,8 @@ interface UserManagerModalProps {
 export default function UserManagerModal({
   isOpen,
   onClose,
-  roles,
-  permissions,
+  roles = [],
+  permissions = [],
   onSuccess,
 }: UserManagerModalProps) {
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export default function UserManagerModal({
   const derivedUsername = email ? email.toLowerCase().trim().split('@')[0].replace(/[^a-z0-9_]/g, '') || 'staff' : 'staff';
 
   // Group permissions by Module
-  const groupedPerms = permissions.reduce((acc, curr) => {
+  const groupedPerms = (permissions || []).reduce((acc, curr) => {
     if (!acc[curr.module]) acc[curr.module] = [];
     acc[curr.module].push(curr);
     return acc;
@@ -56,35 +56,33 @@ export default function UserManagerModal({
     }
 
     setLoading(true);
+    const username = email.includes('@') ? email.split('@')[0] : email;
     const res = await createStaffUser({
+      username,
       name,
-      email,
-      roleId,
-      useDefaultPermissions,
-      manualPermissionIds: useDefaultPermissions ? [] : manualPermIds,
+      password: 'user123',
+      roleId: roleId || undefined,
     });
     setLoading(false);
 
     if (res.success) {
-      alert(res.message || `✅ Staff account "${name}" created!`);
-      setName('');
-      setEmail('');
+      alert(`✅ Staff User "${name}" created successfully! Default password is "user123"`);
       onSuccess();
       onClose();
     } else {
-      alert('❌ Error: ' + res.error);
+      alert('❌ Error: ' + (res.error || 'Failed to create user'));
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto text-white">
+        <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
           <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-base font-bold text-slate-900">Create New Staff User</h3>
+            <UserPlus className="w-5 h-5 text-emerald-500" />
+            <h3 className="text-base font-bold text-white">Create New Staff User</h3>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg">
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -92,9 +90,9 @@ export default function UserManagerModal({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Staff Member Name *</label>
+              <label className="text-xs font-bold text-slate-300 block mb-1">Staff Member Name *</label>
               <input
-                className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-semibold"
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-semibold"
                 placeholder="e.g. Suresh Kumar"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -103,32 +101,32 @@ export default function UserManagerModal({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Staff Email Address *</label>
+              <label className="text-xs font-bold text-slate-300 block mb-1">Staff Email Address *</label>
               <input
                 type="email"
-                className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
                 placeholder="suresh@efcpl.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
               {email && (
-                <div className="text-[11px] text-slate-500 font-mono mt-1">
-                  Auto-assigned Username: <span className="font-bold text-emerald-700">@{derivedUsername}</span>
+                <div className="text-[11px] text-slate-400 font-mono mt-1">
+                  Auto-assigned Username: <span className="font-bold text-emerald-400">@{derivedUsername}</span>
                 </div>
               )}
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Assigned Role *</label>
+            <label className="text-xs font-bold text-slate-300 block mb-1">Assigned Role *</label>
             <select
-              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-semibold"
+              className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-semibold"
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
             >
               {roles.map((r) => (
-                <option key={r.id} value={r.id}>
+                <option key={r.id} value={r.id} className="bg-[#162440] text-white">
                   {r.name} {r.isSystemAdmin ? '(System Admin)' : ''}
                 </option>
               ))}
@@ -136,19 +134,19 @@ export default function UserManagerModal({
           </div>
 
           {/* INFO BOX REGARDING FIRST-TIME PASSWORD SETUP */}
-          <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-start gap-2.5 text-xs text-emerald-900 font-medium">
-            <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl flex items-start gap-2.5 text-xs text-emerald-300 font-medium">
+            <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold">First-Time Login Setup</div>
-              <p className="text-[11px] text-emerald-800 font-normal mt-0.5">
-                No password required now. The staff member will be prompted to create their password when logging in for the first time with their email or username (@{derivedUsername}).
+              <div className="font-bold text-white">First-Time Login Setup</div>
+              <p className="text-[11px] text-emerald-200/80 font-normal mt-0.5">
+                Staff member will log in with email or username (@{derivedUsername}) and default password: <code className="bg-[#162440] px-1.5 py-0.5 rounded text-white font-mono">user123</code>.
               </p>
             </div>
           </div>
 
           {/* PERMISSION SELECTION MODE */}
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
-            <label className="text-xs font-bold text-slate-900 block mb-1">
+          <div className="bg-[#162440] border border-[#2A3F66] p-4 rounded-xl space-y-2">
+            <label className="text-xs font-bold text-white block mb-1">
               Permission Model for this Staff Member
             </label>
 
@@ -157,8 +155,8 @@ export default function UserManagerModal({
                 onClick={() => setUseDefaultPermissions(true)}
                 className={`p-3 rounded-xl border text-xs cursor-pointer flex items-start gap-2.5 transition-all ${
                   useDefaultPermissions
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-semibold'
-                    : 'bg-white border-slate-200 text-slate-700'
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-white font-semibold'
+                    : 'bg-[#0D1B2E] border-[#2A3F66] text-slate-300'
                 }`}
               >
                 <input
@@ -170,10 +168,10 @@ export default function UserManagerModal({
                 />
                 <div>
                   <div className="font-bold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                     Use Role Default Authorities
                   </div>
-                  <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                  <p className="text-[11px] text-slate-400 font-normal mt-0.5">
                     Inherit standard permissions defined for "{selectedRole?.name || 'this role'}".
                   </p>
                 </div>
@@ -183,8 +181,8 @@ export default function UserManagerModal({
                 onClick={() => setUseDefaultPermissions(false)}
                 className={`p-3 rounded-xl border text-xs cursor-pointer flex items-start gap-2.5 transition-all ${
                   !useDefaultPermissions
-                    ? 'bg-blue-50 border-blue-300 text-blue-950 font-semibold'
-                    : 'bg-white border-slate-200 text-slate-700'
+                    ? 'bg-blue-500/15 border-blue-500/40 text-white font-semibold'
+                    : 'bg-[#0D1B2E] border-[#2A3F66] text-slate-300'
                 }`}
               >
                 <input
@@ -196,7 +194,7 @@ export default function UserManagerModal({
                 />
                 <div>
                   <div className="font-bold">Customize Manual Authorities</div>
-                  <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                  <p className="text-[11px] text-slate-400 font-normal mt-0.5">
                     Manually pick specific privileges for this user.
                   </p>
                 </div>
@@ -207,13 +205,13 @@ export default function UserManagerModal({
           {/* MANUAL PERMISSION CHECKBOXES */}
           {!useDefaultPermissions && (
             <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                 Select Specific Authorities ({manualPermIds.length} Selected)
               </h4>
 
               {Object.keys(groupedPerms).map((mod) => (
-                <div key={mod} className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
-                  <span className="text-xs font-bold text-slate-900 block mb-2">{mod}</span>
+                <div key={mod} className="border border-[#1E2F4A] rounded-xl p-3 bg-[#162440]/40">
+                  <span className="text-xs font-bold text-white block mb-2 uppercase tracking-wider">{mod}</span>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {groupedPerms[mod].map((perm) => {
                       const isChecked = manualPermIds.includes(perm.id);
@@ -221,17 +219,17 @@ export default function UserManagerModal({
                         <label
                           key={perm.id}
                           onClick={() => togglePerm(perm.id)}
-                          className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer select-none transition-all ${
+                          className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs cursor-pointer select-none transition-all ${
                             isChecked
-                              ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-semibold'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-white font-semibold'
+                              : 'bg-[#162440] border-[#2A3F66] text-slate-300 hover:bg-[#1E2F4A]'
                           }`}
                         >
                           <div
                             className={`w-4 h-4 rounded flex items-center justify-center border ${
                               isChecked
-                                ? 'bg-emerald-600 border-emerald-600 text-white'
-                                : 'border-slate-300 bg-white'
+                                ? 'bg-emerald-500 border-emerald-500 text-white'
+                                : 'border-[#2A3F66] bg-[#0D1B2E]'
                             }`}
                           >
                             {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
@@ -246,18 +244,18 @@ export default function UserManagerModal({
             </div>
           )}
 
-          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2 sticky bottom-0 bg-white py-2">
+          <div className="pt-3 border-t border-[#1E2F4A] flex justify-end gap-2 sticky bottom-0 bg-[#0D1B2E] py-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+              className="px-4 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-md"
+              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-md cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create Staff User'}
             </button>

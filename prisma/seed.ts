@@ -1,11 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
+import { prisma } from '../src/lib/prisma';
 import crypto from 'crypto';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -14,79 +8,93 @@ function hashPassword(password: string): string {
 }
 
 async function main() {
-  console.log('🌱 Starting database seed...');
+  console.log('🌱 Starting database seed for updated EFCPL MES system...');
 
-  // 1. SYSTEM PERMISSIONS
+  // 1. GRANULAR PERMISSIONS (Discord-style)
   const permissions = [
-    // Overview
-    { key: 'dashboard:view', label: 'View Dashboard & KPIs', module: 'Overview' },
-    { key: 'alerts:view', label: 'View Active Alerts', module: 'Overview' },
+    // Inventory Section
+    { key: 'inventory:rm:view', label: 'View Raw Materials', module: 'Inventory', action: 'view' },
+    { key: 'inventory:rm:create', label: 'Create Raw Material', module: 'Inventory', action: 'create' },
+    { key: 'inventory:rm:edit', label: 'Edit Raw Material', module: 'Inventory', action: 'edit' },
+    { key: 'inventory:rm:delete', label: 'Delete Raw Material', module: 'Inventory', action: 'delete' },
 
-    // Raw Materials
-    { key: 'rm:view', label: 'View Raw Materials', module: 'Raw Materials' },
-    { key: 'rm:create', label: 'Create Raw Material', module: 'Raw Materials' },
-    { key: 'rm:edit', label: 'Edit Raw Material', module: 'Raw Materials' },
-    { key: 'rm:delete', label: 'Delete Raw Material', module: 'Raw Materials' },
+    { key: 'inventory:pm:view', label: 'View Packaging Materials', module: 'Inventory', action: 'view' },
+    { key: 'inventory:pm:create', label: 'Create Packaging Material', module: 'Inventory', action: 'create' },
+    { key: 'inventory:pm:edit', label: 'Edit Packaging Material', module: 'Inventory', action: 'edit' },
+    { key: 'inventory:pm:delete', label: 'Delete Packaging Material', module: 'Inventory', action: 'delete' },
 
-    // Finished Goods
-    { key: 'fg:view', label: 'View Finished Goods', module: 'Finished Goods' },
-    { key: 'fg:create', label: 'Create Finished Good', module: 'Finished Goods' },
-    { key: 'fg:edit', label: 'Edit Finished Good', module: 'Finished Goods' },
-    { key: 'fg:dispatch', label: 'Dispatch Finished Goods', module: 'Finished Goods' },
-    { key: 'fg:delete', label: 'Delete Finished Good', module: 'Finished Goods' },
+    // Operations Section (5 Dedicated Tabs)
+    { key: 'operations:rm_issue:view', label: 'View RM Issues', module: 'Operations', action: 'view' },
+    { key: 'operations:rm_issue:create', label: 'Create RM Issue', module: 'Operations', action: 'create' },
+    { key: 'operations:rm_issue:delete', label: 'Delete RM Issue', module: 'Operations', action: 'delete' },
 
-    // Packaging Materials
-    { key: 'pm:view', label: 'View Packaging', module: 'Packaging' },
-    { key: 'pm:create', label: 'Create Packaging', module: 'Packaging' },
-    { key: 'pm:edit', label: 'Edit Packaging', module: 'Packaging' },
-    { key: 'pm:delete', label: 'Delete Packaging', module: 'Packaging' },
+    { key: 'operations:production:view', label: 'View Production Logs', module: 'Operations', action: 'view' },
+    { key: 'operations:production:create', label: 'Record Production Log', module: 'Operations', action: 'create' },
+    { key: 'operations:production:delete', label: 'Delete Production Log', module: 'Operations', action: 'delete' },
 
-    // Operations (GRN / Issues)
-    { key: 'grn:create', label: 'Post Goods Receipt Note (GRN)', module: 'Operations' },
-    { key: 'issue:create', label: 'Post Material Issue Slip', module: 'Operations' },
+    { key: 'operations:pm_issue:view', label: 'View Packaging Issues', module: 'Operations', action: 'view' },
+    { key: 'operations:pm_issue:create', label: 'Create Packaging Issue', module: 'Operations', action: 'create' },
+    { key: 'operations:pm_issue:delete', label: 'Delete Packaging Issue', module: 'Operations', action: 'delete' },
 
-    // Purchase Orders & Reports
-    { key: 'po:view', label: 'View PO Suggestions', module: 'Operations' },
-    { key: 'reports:view', label: 'View Analytics & Reports', module: 'Reports' },
+    { key: 'operations:fg:view', label: 'View Finished Goods', module: 'Operations', action: 'view' },
+    { key: 'operations:fg:create', label: 'Create Finished Good', module: 'Operations', action: 'create' },
+    { key: 'operations:fg:edit', label: 'Edit Finished Good', module: 'Operations', action: 'edit' },
+    { key: 'operations:fg:delete', label: 'Delete Finished Good', module: 'Operations', action: 'delete' },
 
-    // User & Role Administration
-    { key: 'admin:users', label: 'Manage Staff Users', module: 'Administration' },
-    { key: 'admin:roles', label: 'Manage Roles & Permissions', module: 'Administration' },
-    { key: 'admin:settings', label: 'Manage System Settings & Lookups', module: 'Administration' },
+    { key: 'operations:dispatch:view', label: 'View Dispatches', module: 'Operations', action: 'view' },
+    { key: 'operations:dispatch:create', label: 'Create Dispatch', module: 'Operations', action: 'create' },
+    { key: 'operations:dispatch:delete', label: 'Delete Dispatch', module: 'Operations', action: 'delete' },
+
+    // Master Add Materials Section
+    { key: 'master:add_materials:access', label: 'Access Add Materials Hub', module: 'Add Materials', action: 'create' },
+
+    // Admin Governance
+    { key: 'admin:roles:manage', label: 'Manage Discord Roles & Permissions', module: 'Administration', action: 'edit' },
+    { key: 'admin:users:manage', label: 'Manage Staff Users', module: 'Administration', action: 'edit' },
+    { key: 'admin:lookups:manage', label: 'Manage System Lookups', module: 'Administration', action: 'edit' },
   ];
 
   const createdPermsMap: Record<string, string> = {};
   for (const perm of permissions) {
     const p = await prisma.permission.upsert({
       where: { key: perm.key },
-      update: { label: perm.label, module: perm.module },
+      update: { label: perm.label, module: perm.module, action: perm.action },
       create: perm,
     });
     createdPermsMap[perm.key] = p.id;
   }
 
-  // 2. DEFAULT ROLES (Discord style color tags)
+  // 2. DISCORD STYLE ROLES
   const adminRole = await prisma.role.upsert({
     where: { name: 'System Admin' },
     update: { isSystemAdmin: true, colorTag: '#EF4444' },
     create: {
       name: 'System Admin',
       colorTag: '#EF4444',
-      description: 'Full access to all modules and user governance',
+      description: 'Full administrative access across all modules, roles, and users',
       isSystemAdmin: true,
-      isDefault: true,
     },
   });
 
-  const managerRole = await prisma.role.upsert({
+  const storeManagerRole = await prisma.role.upsert({
     where: { name: 'Store Manager' },
-    update: { colorTag: '#1D9E75' },
+    update: { colorTag: '#10B981' },
     create: {
       name: 'Store Manager',
-      colorTag: '#1D9E75',
-      description: 'Operational manager with stock creation, GRN, and issue rights',
+      colorTag: '#10B981',
+      description: 'Manages Raw Materials, Packaging Materials, and Issuances',
       isSystemAdmin: false,
-      isDefault: true,
+    },
+  });
+
+  const productionSupervisorRole = await prisma.role.upsert({
+    where: { name: 'Production Supervisor' },
+    update: { colorTag: '#F59E0B' },
+    create: {
+      name: 'Production Supervisor',
+      colorTag: '#F59E0B',
+      description: 'Manages Production runs, Batch outputs, and Finished Goods',
+      isSystemAdmin: false,
     },
   });
 
@@ -107,53 +115,127 @@ async function main() {
     });
   }
 
-  // 3. ADMIN USER
-  const adminPasswordHash = hashPassword('admin123password');
+  // 3. SEED INITIAL DEMO USERS
+  const adminPassword = hashPassword('admin123');
   await prisma.user.upsert({
-    where: { email: 'admin@efcpl.com' },
+    where: { username: 'admin' },
     update: {
-      name: 'EFCPL Administrator',
-      username: 'admin',
-      passwordHash: adminPasswordHash,
-      isPasswordSet: true,
+      name: 'Executive Admin',
+      passwordHash: adminPassword,
       roleId: adminRole.id,
-      useDefaultPermissions: true,
+      isActive: true,
     },
     create: {
-      email: 'admin@efcpl.com',
       username: 'admin',
-      name: 'EFCPL Administrator',
-      passwordHash: adminPasswordHash,
-      isPasswordSet: true,
+      name: 'Executive Admin',
+      passwordHash: adminPassword,
       roleId: adminRole.id,
-      useDefaultPermissions: true,
+      isActive: true,
     },
   });
 
-  // Demo Manager User
-  const managerPasswordHash = hashPassword('manager123');
+  const managerPassword = hashPassword('manager123');
   await prisma.user.upsert({
-    where: { email: 'manager@efcpl.com' },
+    where: { username: 'manager' },
     update: {
-      name: 'Ramesh Patil (Store Manager)',
-      username: 'manager',
-      passwordHash: managerPasswordHash,
-      isPasswordSet: true,
-      roleId: managerRole.id,
-      useDefaultPermissions: true,
+      name: 'Suresh Patil (Store Manager)',
+      passwordHash: managerPassword,
+      roleId: storeManagerRole.id,
+      isActive: true,
     },
     create: {
-      email: 'manager@efcpl.com',
       username: 'manager',
-      name: 'Ramesh Patil (Store Manager)',
-      passwordHash: managerPasswordHash,
-      isPasswordSet: true,
-      roleId: managerRole.id,
-      useDefaultPermissions: true,
+      name: 'Suresh Patil (Store Manager)',
+      passwordHash: managerPassword,
+      roleId: storeManagerRole.id,
+      isActive: true,
     },
   });
 
-  console.log('✅ Database seeded successfully with Admin User (username: admin, email: admin@efcpl.com)');
+  // 4. SAMPLE SEED DATA FOR INVENTORY & OPERATIONS
+  console.log('📦 Seeding sample Raw Materials...');
+  await prisma.rawMaterial.upsert({
+    where: { code: 'RM001' },
+    update: {},
+    create: {
+      code: 'RM001',
+      name: 'Refined Sugar (Grade A)',
+      brand: 'Madhur Pure',
+      batchNumber: 'B-SUG-2026-01',
+      stock: 4500,
+      unit: 'KG',
+      reorderLevel: 1000,
+      maxStock: 10000,
+      supplier: 'Sahakar Sugar Mills',
+      location: 'Cold Room Zone A',
+      expiryDate: new Date('2027-08-30'),
+      status: 'Active',
+    },
+  });
+
+  await prisma.rawMaterial.upsert({
+    where: { code: 'RM002' },
+    update: {},
+    create: {
+      code: 'RM002',
+      name: 'Mango Pulp Puree',
+      brand: 'Alphonso Premium',
+      batchNumber: 'B-MNG-2026-04',
+      stock: 1200,
+      unit: 'LTR',
+      reorderLevel: 500,
+      maxStock: 5000,
+      supplier: 'Konkan Agro Tech',
+      location: 'Deep Freeze -18°C',
+      expiryDate: new Date('2026-12-15'),
+      status: 'Active',
+    },
+  });
+
+  console.log('📦 Seeding sample Packaging Materials...');
+  await prisma.packagingMaterial.upsert({
+    where: { code: 'PM001' },
+    update: {},
+    create: {
+      code: 'PM001',
+      name: '500ml Glass Jar Bottles',
+      brand: 'Hindusthan Glass',
+      batchNumber: 'P-BOT-2026-99',
+      stock: 25000,
+      unit: 'Units',
+      reorderLevel: 5000,
+      maxStock: 50000,
+      supplier: 'Hindusthan National Glass',
+      location: 'Warehouse Bay B2',
+      expiryDate: new Date('2030-01-01'),
+      status: 'Active',
+    },
+  });
+
+  console.log('📦 Seeding sample Finished Goods...');
+  const mfg = new Date('2026-08-01');
+  const exp = new Date('2027-08-01');
+  const shelfDays = Math.round((exp.getTime() - mfg.getTime()) / (1000 * 3600 * 24));
+
+  await prisma.finishedGood.upsert({
+    where: { sku: 'FGPRO001' },
+    update: {},
+    create: {
+      sku: 'FGPRO001',
+      name: 'Premium Mango Jam 500g Jar',
+      batchNumber: 'FG-MNG-8801',
+      quantityProduced: 2000,
+      totalStock: 1800,
+      unit: 'Jars',
+      mfgDate: mfg,
+      expiryDate: exp,
+      shelfLifeDays: shelfDays,
+      location: 'Cold Store Zone B',
+      status: 'In Stock',
+    },
+  });
+
+  console.log('🎉 Database successfully seeded!');
 }
 
 main()

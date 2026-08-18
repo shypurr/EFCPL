@@ -4,29 +4,18 @@ import { prisma } from '@/lib/prisma';
 
 export async function getReportsData() {
   try {
-    const rawMaterials = await prisma.rawMaterial.findMany({
-      include: { location: true },
-    });
-    const finishedGoods = await prisma.finishedGood.findMany({
-      include: { location: true },
-    });
+    const rawMaterials = await prisma.rawMaterial.findMany();
+    const finishedGoods = await prisma.finishedGood.findMany();
     const packagingMaterials = await prisma.packagingMaterial.findMany();
-    const movements = await prisma.inventoryMovement.findMany({
-      orderBy: { movementDate: 'desc' },
+    const dispatches = await prisma.dispatch.findMany({
+      orderBy: { dispatchDate: 'desc' },
       take: 100,
     });
-
-    // Valuation calculation
-    const totalRMValuation = rawMaterials.reduce(
-      (sum, r) => sum + r.qty * (r.lastPurchaseRate || 0),
-      0
-    );
 
     // Aging calculation for FG
     const today = new Date();
     const fgAging = finishedGoods
       .map((f) => {
-        const stock = f.qtyProduced - f.qtyDispatched;
         const diffMs = new Date(f.expiryDate).getTime() - today.getTime();
         const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
         const ageMs = today.getTime() - new Date(f.mfgDate).getTime();
@@ -36,10 +25,12 @@ export async function getReportsData() {
           sku: f.sku,
           name: f.name,
           batchNumber: f.batchNumber,
-          stock,
+          stock: f.totalStock,
           unit: f.unit,
           ageDays,
+          mfgDate: f.mfgDate,
           expiryDate: f.expiryDate,
+          shelfLifeDays: f.shelfLifeDays,
           daysLeft,
         };
       })
@@ -52,8 +43,7 @@ export async function getReportsData() {
         rawMaterials,
         finishedGoods,
         packagingMaterials,
-        movements,
-        totalRMValuation,
+        dispatches,
         fgAging,
       },
     };
@@ -66,8 +56,7 @@ export async function getReportsData() {
         rawMaterials: [],
         finishedGoods: [],
         packagingMaterials: [],
-        movements: [],
-        totalRMValuation: 0,
+        dispatches: [],
         fgAging: [],
       },
     };

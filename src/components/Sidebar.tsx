@@ -5,13 +5,17 @@ import {
   BarChart3,
   Bell,
   Wheat,
-  Package,
-  Tag,
+  PackageCheck,
   RefreshCw,
-  ShoppingCart,
-  ClipboardList,
-  Settings,
+  Factory,
+  Box,
+  Truck,
+  PlusCircle,
   ShieldCheck,
+  Users,
+  ClipboardList,
+  ShoppingCart,
+  Boxes,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,24 +28,31 @@ export default function Sidebar({ activePanel, setActivePanel, alertCount }: Sid
   const navItems = [
     { section: 'Overview' },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'alerts-panel', label: 'Alerts', icon: Bell, badge: alertCount },
+    { id: 'alerts', label: 'Alerts', icon: Bell, badge: alertCount },
 
     { section: 'Inventory' },
-    { id: 'raw-materials', label: 'Raw Materials', icon: Wheat },
-    { id: 'finished-goods', label: 'Finished Goods', icon: Package },
-    { id: 'packaging', label: 'Packaging', icon: Tag },
+    { id: 'raw-materials', label: 'Raw Materials (RM)', icon: Wheat },
+    { id: 'packaged-materials', label: 'Packaged Materials (PM)', icon: Boxes },
 
     { section: 'Operations' },
-    { id: 'movements', label: 'GRN / Issues', icon: RefreshCw },
-    { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
+    { id: 'op-rm-issue', label: 'RM Issue', icon: RefreshCw },
+    { id: 'op-production', label: 'Production', icon: Factory },
+    { id: 'op-packaging-issue', label: 'Packaging Issue', icon: Box },
+    { id: 'op-finished-goods', label: 'Finished Goods', icon: PackageCheck },
+    { id: 'op-dispatch', label: 'Dispatch', icon: Truck },
 
-    { section: 'Reports & Config' },
-    { id: 'reports', label: 'Reports', icon: ClipboardList },
-    { id: 'settings', label: 'System Settings', icon: Settings },
+    { section: 'Master Entry Hub' },
+    { id: 'add-materials', label: 'Add Materials / Items', icon: PlusCircle },
+
+    { section: 'Admin & Governance' },
+    { id: 'admin-roles', label: 'Discord Roles & Perms', icon: ShieldCheck },
+    { id: 'admin-users', label: 'Staff Users Manager', icon: Users },
+    { id: 'reports', label: 'Reports & Valuation', icon: ClipboardList },
+    { id: 'po-suggestions', label: 'PO Suggestions', icon: ShoppingCart },
   ];
 
   return (
-    <aside className="hidden md:flex w-60 bg-[#0A1628] text-slate-300 flex-col fixed top-0 left-0 bottom-0 z-50 border-r border-[#1E2F4A]">
+    <aside className="hidden md:flex w-64 bg-[#0A1628] text-slate-300 flex-col fixed top-0 left-0 bottom-0 z-50 border-r border-[#1E2F4A]">
       {/* BRAND LOGO */}
       <div className="p-5 border-b border-[#1E2F4A]">
         <div className="flex items-center gap-2">
@@ -49,9 +60,9 @@ export default function Sidebar({ activePanel, setActivePanel, alertCount }: Sid
             E
           </div>
           <div>
-            <div className="text-white font-bold text-lg tracking-tight leading-none">EFCPL</div>
+            <div className="text-white font-bold text-lg tracking-tight leading-none">EFCPL MES</div>
             <div className="text-[10px] text-slate-400 font-mono tracking-wider mt-1 uppercase">
-              Inventory System v2.0
+              Factory Ops & Inventory
             </div>
           </div>
         </div>
@@ -78,14 +89,14 @@ export default function Sidebar({ activePanel, setActivePanel, alertCount }: Sid
             <button
               key={item.id}
               onClick={() => setActivePanel(item.id!)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                 isActive
                   ? 'bg-[#1D9E75] text-white font-semibold shadow-sm'
                   : 'hover:bg-[#162440] text-slate-400 hover:text-slate-200'
               }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
-              <span className="flex-1 text-left">{item.label}</span>
+              <span className="flex-1 text-left truncate">{item.label}</span>
               {item.badge !== undefined && item.badge > 0 && (
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -103,10 +114,10 @@ export default function Sidebar({ activePanel, setActivePanel, alertCount }: Sid
       {/* FOOTER METADATA */}
       <div className="p-4 border-t border-[#1E2F4A] text-[11px] text-slate-500 font-mono flex items-center justify-between">
         <div>
-          <span>Cloud Sync</span>
+          <span>Database Engine</span>
           <div className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Neon PostgreSQL
+            Prisma SQLite Core
           </div>
         </div>
         <ShieldCheck className="w-4 h-4 text-slate-600" />

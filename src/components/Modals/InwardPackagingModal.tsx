@@ -1,44 +1,37 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { createPackagingMaterial } from '@/actions/packaging';
+import { X, ArrowDownRight } from 'lucide-react';
+import { inwardPackagingMaterial } from '@/actions/packaging';
 
-interface ModalProps {
+interface InwardPackagingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  units?: { code: string; label: string }[];
+  packagingMaterials: any[];
   locations?: { id: string; name: string }[];
   onSuccess: () => void;
 }
 
-export default function AddPackagingModal({
+export default function InwardPackagingModal({
   isOpen,
   onClose,
-  units = [
-    { code: 'Units', label: 'Units (PCS)' },
-    { code: 'Boxes', label: 'Boxes' },
-    { code: 'Rolls', label: 'Rolls' },
-    { code: 'KG', label: 'Kilograms (KG)' },
-  ],
+  packagingMaterials = [],
   locations = [
     { id: 'PM Warehouse', name: 'PM Warehouse' },
     { id: 'Packaging Bay 1', name: 'Packaging Bay 1' },
     { id: 'Dry Storage B', name: 'Dry Storage B' },
   ],
   onSuccess,
-}: ModalProps) {
+}: InwardPackagingModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     brand: '',
-    stock: '',
+    inwardQty: '',
     unit: 'Units',
-    reorderLevel: '',
-    maxStock: '',
-    supplier: '',
     batchNumber: '',
+    supplier: '',
     location: 'PM Warehouse',
     expiryDate: '',
     remarks: '',
@@ -46,23 +39,41 @@ export default function AddPackagingModal({
 
   if (!isOpen) return null;
 
+  const selectedPm = packagingMaterials.find((p) => p.code === formData.code);
+
+  const handleCodeSelect = (selectedCode: string) => {
+    const item = packagingMaterials.find((p) => p.code === selectedCode);
+    if (item) {
+      setFormData({
+        ...formData,
+        code: item.code,
+        name: item.name,
+        brand: item.brand || '',
+        unit: item.unit || 'Units',
+        supplier: item.supplier || '',
+        location: item.location || 'PM Warehouse',
+        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
+      });
+    } else {
+      setFormData({ ...formData, code: selectedCode });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.code || !formData.name || !formData.stock || !formData.reorderLevel) {
-      alert('Please fill in required fields (Code, Material Name, Stock, Reorder Level)');
+    if (!formData.code || !formData.inwardQty || !formData.batchNumber) {
+      alert('Please select Packaging Material Code, enter Inward Qty, and Batch Number');
       return;
     }
 
     setLoading(true);
-    const res = await createPackagingMaterial({
+    const res = await inwardPackagingMaterial({
       code: formData.code,
       name: formData.name,
       brand: formData.brand,
-      batchNumber: formData.batchNumber || `PB-${Date.now().toString().slice(-4)}`,
-      stock: Number(formData.stock),
-      unit: formData.unit || 'Units',
-      reorderLevel: Number(formData.reorderLevel),
-      maxStock: formData.maxStock ? Number(formData.maxStock) : undefined,
+      batchNumber: formData.batchNumber,
+      inwardQty: Number(formData.inwardQty),
+      unit: formData.unit,
       supplier: formData.supplier,
       location: formData.location,
       expiryDate: formData.expiryDate || undefined,
@@ -71,17 +82,15 @@ export default function AddPackagingModal({
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ New Packaging Material "${formData.name}" added to catalog successfully!`);
+      alert(`✅ Successfully received ${formData.inwardQty} ${formData.unit} for ${formData.name}!`);
       setFormData({
         code: '',
         name: '',
         brand: '',
-        stock: '',
+        inwardQty: '',
         unit: 'Units',
-        reorderLevel: '',
-        maxStock: '',
-        supplier: '',
         batchNumber: '',
+        supplier: '',
         location: 'PM Warehouse',
         expiryDate: '',
         remarks: '',
@@ -99,9 +108,9 @@ export default function AddPackagingModal({
         <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              🏷️ Add Brand New Packaging Material (Catalog Item)
+              <ArrowDownRight className="w-5 h-5 text-blue-400" /> Log Incoming / Arrived Packaging Material
             </h3>
-            <p className="text-xs text-slate-400">Define a new bottle, jar, carton or packaging SKU in the catalog</p>
+            <p className="text-xs text-slate-400">Receive stock shipments for existing jars, bottles, caps or cartons</p>
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
@@ -110,111 +119,108 @@ export default function AddPackagingModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* PM Code Dropdown */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Code *</label>
-              <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
-                placeholder="PM009"
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Select PM Code *</label>
+              <select
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                onChange={(e) => handleCodeSelect(e.target.value)}
                 required
-              />
+              >
+                <option value="" className="bg-[#162440] text-slate-400">-- Choose PM Code --</option>
+                {packagingMaterials.map((pm) => (
+                  <option key={pm.id} value={pm.code} className="bg-[#162440] text-white">
+                    {pm.code} — {pm.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Material Name (Auto-filled but editable) */}
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Material Name *</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="500ml Glass Jar with Lug Cap"
+                placeholder="Select code above to auto-fill"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
+
+            {/* Brand / Type */}
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name / Type</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Borosil / Pouch"
+                placeholder="Type or brand"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
               />
             </div>
           </div>
 
+          {/* Current Stock Banner */}
+          {selectedPm && (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs text-blue-300 flex items-center justify-between">
+              <div>
+                <span>Current Stock on Record: </span>
+                <strong className="text-white font-mono">{selectedPm.stock} {selectedPm.unit}</strong>
+                <span className="text-slate-400 ml-2">(Last Batch: {selectedPm.batchNumber})</span>
+              </div>
+              <div className="font-mono text-blue-400 font-bold">
+                Reorder Threshold: {selectedPm.reorderLevel} {selectedPm.unit}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Current Stock Qty *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Incoming / Received Qty *</label>
               <input
                 type="number"
                 step="any"
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="500"
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                placeholder="e.g. 500"
+                value={formData.inwardQty}
+                onChange={(e) => setFormData({ ...formData, inwardQty: e.target.value })}
                 required
               />
             </div>
+
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
-              <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              >
-                {units.map((u) => (
-                  <option key={u.code} value={u.code} className="bg-[#162440] text-white">
-                    {u.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Reorder Level *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
               <input
-                type="number"
-                step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="100"
-                value={formData.reorderLevel}
-                onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+                className="w-full text-xs p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-slate-300 font-mono"
+                value={formData.unit}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Arriving Batch Number *</label>
+              <input
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
+                placeholder="e.g. PB-2026-09"
+                value={formData.batchNumber}
+                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
                 required
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Max Stock Level</label>
-              <input
-                type="number"
-                step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="2000"
-                value={formData.maxStock}
-                onChange={(e) => setFormData({ ...formData, maxStock: e.target.value })}
-              />
-            </div>
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Avon Plastics Pune"
+                placeholder="Supplier name"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number</label>
-              <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono"
-                placeholder="PB-2025-01"
-                value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
               <select
@@ -229,6 +235,7 @@ export default function AddPackagingModal({
                 ))}
               </select>
             </div>
+
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
               <input
@@ -244,7 +251,7 @@ export default function AddPackagingModal({
             <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
             <input
               className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Optional notes, size, thickness..."
+              placeholder="Delivery note number, invoice, or quality remarks..."
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
@@ -263,7 +270,7 @@ export default function AddPackagingModal({
               disabled={loading}
               className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Master PM'}
+              {loading ? 'Receiving Stock...' : 'Receive Inward Stock'}
             </button>
           </div>
         </form>

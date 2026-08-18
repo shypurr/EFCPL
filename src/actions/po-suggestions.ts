@@ -7,46 +7,42 @@ export async function getPurchaseOrderSuggestions() {
     const rawMaterials = await prisma.rawMaterial.findMany();
     const packagingMaterials = await prisma.packagingMaterial.findMany();
 
-    const lowRM = rawMaterials.filter((r) => r.qty <= r.reorderLevel);
-    const lowPM = packagingMaterials.filter((p) => p.qty <= p.reorderLevel);
+    const lowRM = rawMaterials.filter((r) => r.stock <= r.reorderLevel);
+    const lowPM = packagingMaterials.filter((p) => p.stock <= p.reorderLevel);
 
     const suggestions = [
       ...lowRM.map((r) => {
-        const target = r.maxStock ? r.maxStock : r.reorderLevel * 3;
-        const suggestQty = Math.max(0, target - r.qty);
-        const estValue = suggestQty * (r.lastPurchaseRate || 0);
+        const target = r.maxStock ? r.maxStock : (r.reorderLevel > 0 ? r.reorderLevel * 3 : 100);
+        const suggestQty = Math.max(0, target - r.stock);
         return {
           id: r.id,
           category: 'Raw Material',
           code: r.code,
           name: r.name,
-          qty: r.qty,
+          stock: r.stock,
           reorderLevel: r.reorderLevel,
           maxStock: r.maxStock,
           suggestQty,
           unit: r.unit,
-          supplier: r.supplierName || '—',
-          leadTimeDays: r.leadTimeDays,
-          estValue,
+          supplier: r.supplier || '—',
+          status: r.status,
         };
       }),
       ...lowPM.map((p) => {
-        const target = p.reorderLevel * 3;
-        const suggestQty = Math.max(0, target - p.qty);
-        const estValue = suggestQty * (p.lastPurchaseRate || 0);
+        const target = p.maxStock ? p.maxStock : (p.reorderLevel > 0 ? p.reorderLevel * 3 : 100);
+        const suggestQty = Math.max(0, target - p.stock);
         return {
           id: p.id,
-          category: 'Packaging',
+          category: 'Packaging Material',
           code: p.code,
-          name: p.description,
-          qty: p.qty,
+          name: p.name,
+          stock: p.stock,
           reorderLevel: p.reorderLevel,
-          maxStock: null,
+          maxStock: p.maxStock,
           suggestQty,
           unit: p.unit,
           supplier: p.supplier || '—',
-          leadTimeDays: p.leadTimeDays,
-          estValue,
+          status: p.status,
         };
       }),
     ];

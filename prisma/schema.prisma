@@ -1,22 +1,23 @@
-// Prisma Schema for EFCPL Inventory Management System with RBAC & First-Time Auth Flow
+// Prisma Schema for EFCPL Inventory & Manufacturing Execution System (MES)
+// 2 Main Sections: INVENTORY (RM, PM) & OPERATIONS (RM Issue, Production, Packaging Issue, Finished Goods, Dispatch)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ==========================================
-// 1. DYNAMIC SYSTEM LOOKUPS & CONFIGURATION
+// 1. SYSTEM LOOKUPS & CONFIGURATION
 // ==========================================
 
 model SystemLookup {
   id        String   @id @default(cuid())
-  group     String   // "UNIT", "COA_STATUS", "PACKAGING_TYPE", "TEMP_CONDITION"
-  code      String   // "KG", "LTR", "APPROVED", "CARTON"
-  label     String   // "Kilograms (KG)", "Approved", "Corrugated Carton"
+  group     String   // "UNIT", "COA_STATUS", "LOCATION", "BRAND"
+  code      String   // "KG", "LTR", "APPROVED", "ZONE_A"
+  label     String   // "Kilograms (KG)", "Approved", "Cold Store Zone A"
   sortOrder Int      @default(0)
   isActive  Boolean  @default(true)
   metadata  Json?
@@ -25,16 +26,6 @@ model SystemLookup {
 
   @@unique([group, code])
   @@index([group])
-}
-
-model CategoryMaster {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  code        String   @unique
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model StorageLocation {
@@ -46,180 +37,189 @@ model StorageLocation {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  rawMaterials  RawMaterial[]
-  finishedGoods FinishedGood[]
-}
-
-model SystemSetting {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       String
-  description String?
-  updatedAt   DateTime @updatedAt
 }
 
 // ==========================================
-// 2. CORE INVENTORY ENTITIES
+// 2. INVENTORY SECTION (Raw Materials & Packaging Materials)
 // ==========================================
 
 model RawMaterial {
-  id               String           @id @default(cuid())
-  code             String           @unique
-  name             String
-  grade            String?
-  qty              Float            @default(0)
-  unit             String
-  reorderLevel     Float            @default(0)
-  maxStock         Float?
-  supplierName     String?
-  leadTimeDays     Int?             @default(0)
-  lastPurchaseRate Float?           @default(0)
-  lastReceivedDate DateTime?
-  batchNumber      String?
-  coaStatus        String           @default("Approved")
-  locationId       String?
-  location         StorageLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  expiryDate       DateTime?
-  attributes       Json?
-  remarks          String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id           String   @id @default(cuid())
+  code         String   @unique // e.g. RM001
+  name         String
+  brand        String?
+  batchNumber  String
+  stock        Float    @default(0)
+  unit         String   // e.g. KG, LTR
+  reorderLevel Float    @default(0)
+  maxStock     Float?
+  supplier     String?
+  location     String?
+  expiryDate   DateTime?
+  status       String   @default("Active") // Active, Low Stock, Expired
+  attributes   Json?
+  remarks      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  movements InventoryMovement[]
+  rmIssues     RMIssue[]
 
   @@index([code])
   @@index([name])
 }
 
-model FinishedGood {
-  id            String           @id @default(cuid())
-  sku           String           @unique
-  name          String
-  batchNumber   String
-  qtyProduced   Float            @default(0)
-  qtyDispatched Float            @default(0)
-  unit          String           @default("Units")
-  qtyReserved   Float            @default(0)
-  salesOrderRef String?
-  mfgDate       DateTime
-  expiryDate    DateTime
-  shelfLifeDays Int?
-  locationId    String?
-  location      StorageLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  tempCondition String?
-  attributes    Json?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+model PackagingMaterial {
+  id           String   @id @default(cuid())
+  code         String   @unique // e.g. PM001
+  name         String
+  brand        String?
+  batchNumber  String
+  stock        Float    @default(0)
+  unit         String   @default("Units")
+  reorderLevel Float    @default(0)
+  maxStock     Float?
+  supplier     String?
+  location     String?
+  expiryDate   DateTime?
+  status       String   @default("Active")
+  attributes   Json?
+  remarks      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  dispatches DispatchEntry[]
-  movements  InventoryMovement[]
+  pmIssues     PackagingIssue[]
+
+  @@index([code])
+  @@index([name])
+}
+
+// ==========================================
+// 3. OPERATIONS SECTION (5 Dedicated Pipeline Tabs)
+// ==========================================
+
+// Tab 1: RM Issue
+model RMIssue {
+  id               String       @id @default(cuid())
+  rmCode           String?
+  rawMaterial      RawMaterial? @relation(fields: [rmCode], references: [code], onDelete: SetNull)
+  materialName     String
+  batchNumber      String
+  issueFor         String       // FG Name / FG Code target
+  expiryDate       DateTime?
+  quantityInBatch  Float        @default(0)
+  issuedStock      Float
+  issuedDate       DateTime     @default(now())
+  remarks          String?
+  issuedBy         String       @default("Store Manager")
+  createdAt        DateTime     @default(now())
+
+  @@index([rmCode])
+  @@index([issuedDate])
+}
+
+// Tab 2: Production Log
+model ProductionLog {
+  id               String   @id @default(cuid())
+  fgCode           String   // e.g. FGPRO001
+  fgName           String
+  totalBatchesMade Int
+  totalOutput      Float
+  unit             String   @default("KG")
+  wastage          Float    @default(0)
+  mfgDate          DateTime // Form entry only
+  expiryDate       DateTime // Form entry only
+  remarks          String?  // Form entry only
+  operator         String   @default("Supervisor")
+  createdAt        DateTime @default(now())
+
+  @@index([fgCode])
+  @@index([createdAt])
+}
+
+// Tab 3: Packaging Issue
+model PackagingIssue {
+  id                String             @id @default(cuid())
+  pmCode            String?
+  packagingMaterial PackagingMaterial? @relation(fields: [pmCode], references: [code], onDelete: SetNull)
+  pmName            String
+  issueFor          String             // FG Target Name
+  quantityInBatch   Float              @default(0)
+  issuedQty         Float
+  issuedDate        DateTime           @default(now())
+  remarks           String?
+  issuedBy          String             @default("Store Manager")
+  createdAt         DateTime           @default(now())
+
+  @@index([pmCode])
+  @@index([issuedDate])
+}
+
+// Tab 4: Finished Goods (FG Master & Batch Stock)
+model FinishedGood {
+  id               String   @id @default(cuid())
+  sku              String   @unique // FG Code / SKU
+  name             String
+  batchNumber      String
+  quantityProduced Float    @default(0)
+  totalStock       Float    @default(0)
+  unit             String   @default("KG")
+  mfgDate          DateTime
+  expiryDate       DateTime
+  shelfLifeDays    Int      // Auto-calculated: Expiry - MFG in days
+  location         String?
+  status           String   @default("In Stock")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  dispatches       Dispatch[]
 
   @@index([sku])
   @@index([batchNumber])
 }
 
-model PackagingMaterial {
-  id               String   @id @default(cuid())
-  code             String   @unique
-  type             String
-  description      String
-  specification    String?
-  qty              Float    @default(0)
-  unit             String   @default("Units")
-  linkedSkus       String?
-  supplier         String?
-  moq              Float?   @default(0)
-  leadTimeDays     Int?     @default(0)
-  lastPurchaseRate Float?   @default(0)
-  reorderLevel     Float    @default(0)
-  avgConsumption   Float?   @default(0)
-  attributes       Json?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+// Tab 5: Dispatch Log
+model Dispatch {
+  id            String        @id @default(cuid())
+  skuCode       String?
+  finishedGood  FinishedGood? @relation(fields: [skuCode], references: [sku], onDelete: SetNull)
+  productName   String
+  batchCode     String
+  dispatchQty   Float
+  dispatchDate  DateTime      @default(now())
+  partyName     String        // Buyer / Client Name
+  mfgDate       DateTime
+  expiryDate    DateTime
+  location      String?
+  coaStatus     String        @default("Approved") // Approved, Pending, N/A
+  remarks       String?
+  dispatchedBy  String        @default("Dispatch Officer")
+  createdAt     DateTime      @default(now())
 
-  movements InventoryMovement[]
-
-  @@index([code])
+  @@index([skuCode])
+  @@index([dispatchDate])
 }
 
 // ==========================================
-// 3. MOVEMENTS & TRANSACTIONS
-// ==========================================
-
-enum MovementType {
-  GRN
-  ISSUE
-  DISPATCH
-  ADJUSTMENT
-}
-
-model InventoryMovement {
-  id             String             @id @default(cuid())
-  refNumber      String             @unique
-  type           MovementType
-  category       String
-  materialId     String?
-  rawMaterial    RawMaterial?       @relation(fields: [materialId], references: [id], onDelete: SetNull)
-  finishedGoodId String?
-  finishedGood   FinishedGood?      @relation(fields: [finishedGoodId], references: [id], onDelete: SetNull)
-  packagingId    String?
-  packaging      PackagingMaterial? @relation(fields: [packagingId], references: [id], onDelete: SetNull)
-
-  itemTitle      String
-  qty            Float
-  unit           String
-  party          String?
-  invoiceRef     String?
-  batchRef       String?
-  coaStatus      String?
-  performedBy    String             @default("Store Manager")
-  remarks        String?
-  movementDate   DateTime           @default(now())
-  createdAt      DateTime           @default(now())
-
-  @@index([refNumber])
-  @@index([type])
-  @@index([movementDate])
-}
-
-model DispatchEntry {
-  id             String       @id @default(cuid())
-  dispatchNo     String       @unique
-  dispatchDate   DateTime     @default(now())
-  finishedGoodId String
-  finishedGood   FinishedGood @relation(fields: [finishedGoodId], references: [id], onDelete: Cascade)
-  qtyDispatched  Float
-  unit           String
-  customerName   String
-  salesOrderRef  String?
-  dispatchedBy   String
-  remarks        String?
-  createdAt      DateTime     @default(now())
-}
-
-// ==========================================
-// 4. AUTHENTICATION & RBAC (DYNAMIC ROLES & FIRST-TIME FLOW)
+// 4. AUTHENTICATION & RBAC (DISCORD-STYLE ROLES & PERMISSIONS)
 // ==========================================
 
 model Permission {
   id          String   @id @default(cuid())
-  key         String   @unique
+  key         String   @unique // e.g. "inventory:rm:edit", "operations:production:create"
   label       String
-  module      String
+  module      String   // "inventory", "operations_rm_issue", "operations_production", etc.
+  action      String   // "view", "create", "edit", "delete"
   description String?
 
   rolePermissions RolePermission[]
-  userPermissions UserPermission[]
 }
 
 model Role {
   id            String   @id @default(cuid())
-  name          String   @unique
+  name          String   @unique // e.g. "Store Manager", "Production Supervisor"
   colorTag      String   @default("#3B82F6")
   description   String?
   isSystemAdmin Boolean  @default(false)
-  isDefault     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -238,31 +238,17 @@ model RolePermission {
 }
 
 model User {
-  id                    String   @id @default(cuid())
-  email                 String   @unique
-  username              String   @unique // Auto-generated from email prefix (e.g. suresh from suresh@efcpl.com)
-  passwordHash          String?  // Nullable initially before first-time password creation
-  isPasswordSet         Boolean  @default(false) // Track if staff has completed first-time setup
-  name                  String
-  roleId                String?
-  role                  Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  useDefaultPermissions Boolean  @default(true)
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id            String   @id @default(cuid())
+  username      String   @unique
+  name          String
+  passwordHash  String
+  roleId        String?
+  role          Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  userPermissions       UserPermission[]
-  auditLogs             AuditLog[]
-}
-
-model UserPermission {
-  id           String     @id @default(cuid())
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  permissionId String
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, permissionId])
+  auditLogs     AuditLog[]
 }
 
 model AuditLog {

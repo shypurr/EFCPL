@@ -1,45 +1,37 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { createRawMaterial } from '@/actions/raw-materials';
+import { X, ArrowDownRight } from 'lucide-react';
+import { inwardRawMaterial } from '@/actions/raw-materials';
 
-interface ModalProps {
+interface InwardRawMaterialModalProps {
   isOpen: boolean;
   onClose: () => void;
-  units?: { code: string; label: string }[];
+  rawMaterials: any[];
   locations?: { id: string; name: string }[];
   onSuccess: () => void;
 }
 
-export default function AddRawMaterialModal({
+export default function InwardRawMaterialModal({
   isOpen,
   onClose,
-  units = [
-    { code: 'KG', label: 'Kilograms (KG)' },
-    { code: 'GM', label: 'Grams (GM)' },
-    { code: 'LTR', label: 'Liters (LTR)' },
-    { code: 'ML', label: 'Milliliters (ML)' },
-    { code: 'BAGS', label: 'Bags (BAGS)' },
-  ],
+  rawMaterials = [],
   locations = [
     { id: 'RM Store A', name: 'RM Store A' },
     { id: 'Cold Storage 1', name: 'Cold Storage 1' },
     { id: 'Dry Warehouse', name: 'Dry Warehouse' },
   ],
   onSuccess,
-}: ModalProps) {
+}: InwardRawMaterialModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     brand: '',
-    stock: '',
+    inwardQty: '',
     unit: 'KG',
-    reorderLevel: '',
-    maxStock: '',
-    supplier: '',
     batchNumber: '',
+    supplier: '',
     location: 'RM Store A',
     expiryDate: '',
     remarks: '',
@@ -47,23 +39,59 @@ export default function AddRawMaterialModal({
 
   if (!isOpen) return null;
 
+  const selectedRm = rawMaterials.find((r) => r.code === formData.code);
+
+  const handleCodeSelect = (selectedCode: string) => {
+    const item = rawMaterials.find((r) => r.code === selectedCode);
+    if (item) {
+      setFormData({
+        ...formData,
+        code: item.code,
+        name: item.name,
+        brand: item.brand || '',
+        unit: item.unit || 'KG',
+        supplier: item.supplier || '',
+        location: item.location || 'RM Store A',
+        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
+      });
+    } else {
+      setFormData({ ...formData, code: selectedCode });
+    }
+  };
+
+  const handleNameSelect = (selectedName: string) => {
+    const item = rawMaterials.find((r) => r.name === selectedName);
+    if (item) {
+      setFormData({
+        ...formData,
+        code: item.code,
+        name: item.name,
+        brand: item.brand || '',
+        unit: item.unit || 'KG',
+        supplier: item.supplier || '',
+        location: item.location || 'RM Store A',
+        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
+      });
+    } else {
+      setFormData({ ...formData, name: selectedName });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.code || !formData.name || !formData.stock || !formData.reorderLevel) {
-      alert('Please fill in required fields (Code, Name, Current Stock, Reorder Level)');
+    if (!formData.code || !formData.inwardQty || !formData.batchNumber) {
+      alert('Please select Raw Material Code, enter Inward Qty, and Batch Number');
       return;
     }
 
     setLoading(true);
-    const res = await createRawMaterial({
+    const res = await inwardRawMaterial({
       code: formData.code,
       name: formData.name,
       brand: formData.brand,
-      batchNumber: formData.batchNumber || `BATCH-${Date.now().toString().slice(-4)}`,
-      stock: Number(formData.stock),
-      unit: formData.unit || 'KG',
-      reorderLevel: Number(formData.reorderLevel),
-      maxStock: formData.maxStock ? Number(formData.maxStock) : undefined,
+      batchNumber: formData.batchNumber,
+      inwardQty: Number(formData.inwardQty),
+      unit: formData.unit,
       supplier: formData.supplier,
       location: formData.location,
       expiryDate: formData.expiryDate || undefined,
@@ -72,17 +100,15 @@ export default function AddRawMaterialModal({
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ New Raw Material "${formData.name}" added to catalog successfully!`);
+      alert(`✅ Successfully received ${formData.inwardQty} ${formData.unit} for ${formData.name}!`);
       setFormData({
         code: '',
         name: '',
         brand: '',
-        stock: '',
+        inwardQty: '',
         unit: 'KG',
-        reorderLevel: '',
-        maxStock: '',
-        supplier: '',
         batchNumber: '',
+        supplier: '',
         location: 'RM Store A',
         expiryDate: '',
         remarks: '',
@@ -100,9 +126,9 @@ export default function AddRawMaterialModal({
         <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              🌾 Add Brand New Raw Material (Catalog Item)
+              <ArrowDownRight className="w-5 h-5 text-emerald-400" /> Log Incoming / Arrived Raw Material
             </h3>
-            <p className="text-xs text-slate-400">Define a new raw material master record in the system</p>
+            <p className="text-xs text-slate-400">Receive stock shipments for existing raw material items</p>
           </div>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">
             <X className="w-5 h-5" />
@@ -111,111 +137,108 @@ export default function AddRawMaterialModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* RM Code Dropdown (Linked to Name) */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Code *</label>
-              <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono"
-                placeholder="RM009"
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Select RM Code *</label>
+              <select
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono"
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                onChange={(e) => handleCodeSelect(e.target.value)}
                 required
-              />
+              >
+                <option value="" className="bg-[#162440] text-slate-400">-- Choose RM Code --</option>
+                {rawMaterials.map((rm) => (
+                  <option key={rm.id} value={rm.code} className="bg-[#162440] text-white">
+                    {rm.code} — {rm.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Material Name (Auto-filled but editable) */}
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Material Name *</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="Coriander Powder"
+                placeholder="Select code above to auto-fill"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
+
+            {/* Brand Name */}
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="Everest / MDH"
+                placeholder="Brand name"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
               />
             </div>
           </div>
 
+          {/* Current Stock Banner */}
+          {selectedRm && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-xs text-emerald-300 flex items-center justify-between">
+              <div>
+                <span>Current Stock on Record: </span>
+                <strong className="text-white font-mono">{selectedRm.stock} {selectedRm.unit}</strong>
+                <span className="text-slate-400 ml-2">(Last Batch: {selectedRm.batchNumber})</span>
+              </div>
+              <div className="font-mono text-emerald-400 font-bold">
+                Reorder Threshold: {selectedRm.reorderLevel} {selectedRm.unit}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Current Stock Qty *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Incoming / Received Qty *</label>
               <input
                 type="number"
                 step="any"
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="100"
-                value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                placeholder="e.g. 250"
+                value={formData.inwardQty}
+                onChange={(e) => setFormData({ ...formData, inwardQty: e.target.value })}
                 required
               />
             </div>
+
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
-              <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              >
-                {units.map((u) => (
-                  <option key={u.code} value={u.code} className="bg-[#162440] text-white">
-                    {u.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Reorder Level *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
               <input
-                type="number"
-                step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="50"
-                value={formData.reorderLevel}
-                onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+                className="w-full text-xs p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-slate-300 font-mono"
+                value={formData.unit}
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Arriving Batch Number *</label>
+              <input
+                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono"
+                placeholder="e.g. B2026-081"
+                value={formData.batchNumber}
+                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
                 required
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Max Stock Level</label>
-              <input
-                type="number"
-                step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="500"
-                value={formData.maxStock}
-                onChange={(e) => setFormData({ ...formData, maxStock: e.target.value })}
-              />
-            </div>
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name</label>
               <input
                 className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="ABC Agro Pune"
+                placeholder="Supplier or vendor"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number</label>
-              <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono"
-                placeholder="B2025-999"
-                value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
               <select
@@ -230,6 +253,7 @@ export default function AddRawMaterialModal({
                 ))}
               </select>
             </div>
+
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
               <input
@@ -245,7 +269,7 @@ export default function AddRawMaterialModal({
             <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
             <input
               className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-              placeholder="Optional notes or specifications..."
+              placeholder="Delivery note number, invoice, or truck details..."
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
@@ -264,7 +288,7 @@ export default function AddRawMaterialModal({
               disabled={loading}
               className="px-4 py-2 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Creating...' : 'Create Master Material'}
+              {loading ? 'Receiving Stock...' : 'Receive Inward Stock'}
             </button>
           </div>
         </form>

@@ -5,12 +5,17 @@ import {
   BarChart3,
   Bell,
   Wheat,
-  Package,
-  Tag,
+  Boxes,
   RefreshCw,
-  ShoppingCart,
+  Factory,
+  Box,
+  PackageCheck,
+  Truck,
+  PlusCircle,
+  ShieldCheck,
+  Users,
   ClipboardList,
-  Settings,
+  ShoppingCart,
   Menu,
   X,
 } from 'lucide-react';
@@ -24,24 +29,35 @@ interface MobileNavProps {
 export default function MobileNav({ activePanel, setActivePanel, alertCount }: MobileNavProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const mainBottomTabs = [
+  const mainBottomTabs: { id: string; label: string; icon: any; badge?: number }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'raw-materials', label: 'Raw Mat', icon: Wheat },
-    { id: 'finished-goods', label: 'Finished', icon: Package },
-    { id: 'movements', label: 'GRN/Issue', icon: RefreshCw },
-    { id: 'alerts-panel', label: 'Alerts', icon: Bell, badge: alertCount },
+    { id: 'op-production', label: 'Production', icon: Factory },
+    { id: 'op-finished-goods', label: 'FG Stock', icon: PackageCheck },
+    { id: 'add-materials', label: 'Add Item', icon: PlusCircle },
   ];
 
   const drawerItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'alerts-panel', label: 'Alerts & Notifications', icon: Bell, badge: alertCount },
-    { id: 'raw-materials', label: 'Raw Materials', icon: Wheat },
-    { id: 'finished-goods', label: 'Finished Goods', icon: Package },
-    { id: 'packaging', label: 'Packaging Materials', icon: Tag },
-    { id: 'movements', label: 'GRN & Material Issues', icon: RefreshCw },
-    { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
-    { id: 'reports', label: 'Reports & Analytics', icon: ClipboardList },
-    { id: 'settings', label: 'System Settings', icon: Settings },
+    { id: 'alerts', label: 'Alerts & Notifications', icon: Bell, badge: alertCount },
+    
+    // Inventory
+    { id: 'raw-materials', label: 'Raw Materials (RM)', icon: Wheat },
+    { id: 'packaged-materials', label: 'Packaged Materials (PM)', icon: Boxes },
+    
+    // Operations
+    { id: 'op-rm-issue', label: 'RM Issue', icon: RefreshCw },
+    { id: 'op-production', label: 'Production', icon: Factory },
+    { id: 'op-packaging-issue', label: 'Packaging Issue', icon: Box },
+    { id: 'op-finished-goods', label: 'Finished Goods', icon: PackageCheck },
+    { id: 'op-dispatch', label: 'Dispatch', icon: Truck },
+    
+    // Add Hub & Admin
+    { id: 'add-materials', label: 'Add Materials / Product', icon: PlusCircle },
+    { id: 'admin-roles', label: 'Discord Roles & Perms', icon: ShieldCheck },
+    { id: 'admin-users', label: 'Staff Users Manager', icon: Users },
+    { id: 'reports', label: 'Reports & Valuation', icon: ClipboardList },
+    { id: 'po-suggestions', label: 'PO Suggestions', icon: ShoppingCart },
   ];
 
   return (
@@ -53,16 +69,16 @@ export default function MobileNav({ activePanel, setActivePanel, alertCount }: M
             E
           </div>
           <div>
-            <span className="font-bold text-sm tracking-tight">EFCPL IMS</span>
-            <span className="text-[9px] font-mono text-slate-400 block -mt-1">Pune Plant</span>
+            <span className="font-bold text-sm tracking-tight">EFCPL MES</span>
+            <span className="text-[9px] font-mono text-slate-400 block -mt-1">Factory Ops</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {alertCount > 0 && (
             <button
-              onClick={() => setActivePanel('alerts-panel')}
-              className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+              onClick={() => setActivePanel('alerts')}
+              className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer"
             >
               <Bell className="w-3 h-3" />
               {alertCount}
@@ -71,7 +87,7 @@ export default function MobileNav({ activePanel, setActivePanel, alertCount }: M
 
           <button
             onClick={() => setDrawerOpen(!drawerOpen)}
-            className="p-1.5 rounded-lg bg-[#162440] text-slate-200"
+            className="p-1.5 rounded-lg bg-[#162440] text-slate-200 cursor-pointer"
           >
             {drawerOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -82,10 +98,10 @@ export default function MobileNav({ activePanel, setActivePanel, alertCount }: M
       {drawerOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col">
           <div className="bg-[#0A1628] text-white p-4 flex items-center justify-between border-b border-[#1E2F4A]">
-            <span className="font-bold text-base">Menu Navigation</span>
+            <span className="font-bold text-base">Navigation Menu</span>
             <button
               onClick={() => setDrawerOpen(false)}
-              className="p-1 rounded bg-[#162440] text-slate-300"
+              className="p-1 rounded bg-[#162440] text-slate-300 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -102,7 +118,7 @@ export default function MobileNav({ activePanel, setActivePanel, alertCount }: M
                     setActivePanel(item.id);
                     setDrawerOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                     isActive ? 'bg-[#1D9E75] text-white font-semibold' : 'bg-[#162440]/60 text-slate-300'
                   }`}
                 >
@@ -129,7 +145,7 @@ export default function MobileNav({ activePanel, setActivePanel, alertCount }: M
             <button
               key={tab.id}
               onClick={() => setActivePanel(tab.id)}
-              className={`flex flex-col items-center gap-1 text-[10px] font-medium relative px-2 py-1 ${
+              className={`flex flex-col items-center gap-1 text-[10px] font-medium relative px-2 py-1 cursor-pointer ${
                 isActive ? 'text-[#1D9E75] font-semibold' : 'text-slate-400'
               }`}
             >
