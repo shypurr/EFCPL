@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, ArrowDownRight } from 'lucide-react';
 import { postGRN } from '@/actions/movements';
 
 interface ModalProps {
@@ -56,10 +56,21 @@ export default function GRNModal({
     });
   };
 
+  const handleQtyChange = (val: string) => {
+    if (val === '') {
+      setFormData({ ...formData, qty: '' });
+      return;
+    }
+    const num = Number(val);
+    if (num < 0 || isNaN(num)) return;
+    setFormData({ ...formData, qty: val });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.itemId || !formData.qty || !formData.supplierName) {
-      alert('Please fill in required fields (Item, Qty, Supplier)');
+    const qtyNum = Number(formData.qty);
+    if (!formData.itemId || formData.qty === '' || qtyNum <= 0 || !formData.supplierName) {
+      alert('Please fill in required fields with valid Received Quantity (> 0) (Item, Qty, Supplier)');
       return;
     }
 
@@ -70,7 +81,7 @@ export default function GRNModal({
       fgCode: formData.itemId || 'FGPRO001',
       fgName: formData.itemId || 'Finished Good',
       totalBatchesMade: 1,
-      totalOutput: Number(formData.qty),
+      totalOutput: qtyNum,
       unit: formData.unit || 'KG',
       mfgDate: mfg,
       expiryDate: exp,
@@ -89,167 +100,161 @@ export default function GRNModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto text-white">
-        <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            📥 New Goods Receipt Note (GRN)
-          </h3>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden text-white animate-in fade-in zoom-in duration-150">
+        <div className="p-4 sm:p-5 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
+          <div className="flex items-center gap-2">
+            <ArrowDownRight className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-sm sm:text-base font-bold text-white">
+              New Goods Receipt Note (GRN)
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#162440] rounded-lg transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Category *</label>
-              <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                value={category}
-                onChange={(e) => {
-                  const cat = e.target.value as 'Raw Material' | 'Packaging';
-                  setCategory(cat);
-                  setFormData({ ...formData, itemId: '' });
-                }}
-              >
-                <option value="Raw Material" className="bg-[#162440] text-white">Raw Material</option>
-                <option value="Packaging" className="bg-[#162440] text-white">Packaging Material</option>
-              </select>
-            </div>
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCategory('Raw Material')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                category === 'Raw Material'
+                  ? 'bg-[#1D9E75] text-white'
+                  : 'bg-[#162440] text-slate-400 hover:bg-[#1E2F4A]'
+              }`}
+            >
+              Raw Material
+            </button>
+            <button
+              type="button"
+              onClick={() => setCategory('Packaging')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                category === 'Packaging'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-[#162440] text-slate-400 hover:bg-[#1E2F4A]'
+              }`}
+            >
+              Packaging Material
+            </button>
+          </div>
 
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Select Item *</label>
               <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] outline-none transition-all"
                 value={formData.itemId}
                 onChange={(e) => handleItemChange(e.target.value)}
                 required
               >
-                <option value="" className="bg-[#162440] text-white">Select material / item</option>
+                <option value="">-- Choose Item --</option>
                 {currentItems.map((item: any) => (
                   <option key={item.id} value={item.id} className="bg-[#162440] text-white">
-                    {item.name || item.description} ({item.code})
+                    {item.code} — {item.name || item.description}
                   </option>
                 ))}
               </select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Received Date *</label>
-              <input
-                type="date"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                value={formData.receivedDate}
-                onChange={(e) => setFormData({ ...formData, receivedDate: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Qty Received *</label>
-              <input
-                type="number"
-                step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="500"
-                value={formData.qty}
-                onChange={(e) => setFormData({ ...formData, qty: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
-              <input
-                className="w-full text-xs p-2.5 border border-[#2A3F66] bg-[#162440]/60 rounded-lg text-slate-300 font-mono"
-                value={formData.unit}
-                readOnly
-              />
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Received Quantity *</label>
+              <div className="relative flex items-center">
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="w-full text-xs sm:text-sm p-2.5 pr-16 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] outline-none font-bold text-emerald-400 transition-all"
+                  placeholder="e.g. 500"
+                  value={formData.qty}
+                  onChange={(e) => handleQtyChange(e.target.value)}
+                  required
+                />
+                <div className="absolute right-1 top-1 bottom-1 px-2.5 bg-[#1E2F4A] rounded-md text-xs font-mono text-slate-300 flex items-center justify-center pointer-events-none shrink-0">
+                  {formData.unit}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name *</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="Shree Ganesh Traders"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] outline-none transition-all"
+                placeholder="Supplier name"
                 value={formData.supplierName}
                 onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
                 required
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Invoice No.</label>
+
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Invoice / DC No.</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="INV-2025-001"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] outline-none transition-all"
+                placeholder="INV-9901"
                 value={formData.invoiceNo}
                 onChange={(e) => setFormData({ ...formData, invoiceNo: e.target.value })}
               />
             </div>
-            <div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Batch No.</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="B2025-101"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] outline-none font-mono transition-all"
+                placeholder="BATCH-123"
                 value={formData.batchNo}
                 onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">CoA Status</label>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">CoA Quality Status</label>
               <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] outline-none transition-all"
                 value={formData.coaStatus}
                 onChange={(e) => setFormData({ ...formData, coaStatus: e.target.value })}
               >
-                {coaStatuses.map((c) => (
-                  <option key={c.code} value={c.code} className="bg-[#162440] text-white">
-                    {c.label}
+                {coaStatuses.map((s) => (
+                  <option key={s.code} value={s.code} className="bg-[#162440] text-white">
+                    {s.label}
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Entered By</label>
-              <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-                placeholder="Ramesh Patil"
-                value={formData.enteredBy}
-                onChange={(e) => setFormData({ ...formData, enteredBy: e.target.value })}
-              />
-            </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
             <input
-              className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
-              placeholder="Optional notes..."
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] outline-none transition-all"
+              placeholder="Vehicle number, inspection notes..."
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
           </div>
 
-          <div className="pt-3 border-t border-[#1E2F4A] flex justify-end gap-2">
+          <div className="pt-3 border-t border-[#1E2F4A] flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
             >
-              {loading ? 'Posting...' : 'Post GRN'}
+              {loading ? 'Posting...' : 'Post GRN Receipt'}
             </button>
           </div>
         </form>

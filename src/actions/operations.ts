@@ -40,8 +40,9 @@ export async function getRMIssues(search?: string) {
 
 export async function getRMDetailsForIssue(rmCode: string) {
   try {
-    const rm = await prisma.rawMaterial.findUnique({
+    const rm = await prisma.rawMaterial.findFirst({
       where: { code: rmCode.trim().toUpperCase() },
+      orderBy: { createdAt: 'desc' },
     });
     if (!rm) {
       return { success: false, error: `Raw Material Code "${rmCode}" not found` };
@@ -80,9 +81,18 @@ export async function createRMIssue(data: {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const rm = await tx.rawMaterial.findUnique({
-        where: { code: data.rmCode.trim().toUpperCase() },
-      });
+      const rm = (data.batchNumber
+        ? await tx.rawMaterial.findFirst({
+            where: {
+              code: data.rmCode.trim().toUpperCase(),
+              batchNumber: data.batchNumber.trim(),
+            },
+            orderBy: { createdAt: 'desc' },
+          })
+        : null) || await tx.rawMaterial.findFirst({
+            where: { code: data.rmCode.trim().toUpperCase() },
+            orderBy: { createdAt: 'desc' },
+          });
 
       if (!rm) {
         throw new Error(`Raw Material "${data.rmCode}" not found.`);

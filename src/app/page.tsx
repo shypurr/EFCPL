@@ -61,6 +61,7 @@ import {
   Info,
   Layers,
   ArrowDownRight,
+  X,
 } from 'lucide-react';
 
 export default function Home() {
@@ -256,15 +257,24 @@ export default function Home() {
         activePanel={activePanel}
         setActivePanel={setActivePanel}
         alertCount={totalAlertsCount}
+        currentUser={currentUser}
+        onOpenLogin={() => setModalLogin(true)}
+        onLogout={async () => {
+          await logoutUser();
+          setCurrentUser(null);
+          loadData();
+        }}
       />
 
       {/* MAIN CONTENT WORKSPACE */}
-      <div className="md:pl-64 flex-1 flex flex-col min-h-screen pb-16 md:pb-0">
-        {/* TOPBAR */}
+      <div className="md:pl-64 flex-1 flex flex-col min-h-screen pb-20 md:pb-6">
+        {/* TOPBAR (DESKTOP & TABLET) */}
         <Topbar
           title="EFCPL MES Dashboard"
           alertCount={totalAlertsCount}
           currentUser={currentUser}
+          onAlertClick={() => setActivePanel('alerts')}
+          onRefresh={loadData}
           onOpenLogin={() => setModalLogin(true)}
           onLogout={async () => {
             await logoutUser();
@@ -274,20 +284,51 @@ export default function Home() {
         />
 
         {/* MAIN BODY */}
-        <main className="p-4 md:p-6 space-y-6 flex-1">
+        <main className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 flex-1 w-full max-w-7xl mx-auto">
+          {/* SEARCH & FILTER BAR */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0D1B2E] border border-[#1E2F4A] p-3 rounded-xl shadow-xs">
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                className="w-full text-xs sm:text-sm pl-9 pr-8 py-2 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
+                placeholder="Search materials, batch numbers, codes, SKUs, or locations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={loadData}
+                className="px-3 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Sync Data</span>
+              </button>
+            </div>
+          </div>
 
           {dbError && (
-            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl flex items-center justify-between text-red-300">
+            <div className="bg-red-500/10 border border-red-500/30 p-3 sm:p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-red-300">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
                 <div>
                   <div className="font-bold text-sm text-white">Database Connection Status</div>
-                  <div className="text-xs">{dbError}</div>
+                  <div className="text-xs text-red-300/90">{dbError}</div>
                 </div>
               </div>
               <button
                 onClick={() => loadData()}
-                className="bg-red-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-all cursor-pointer"
+                className="bg-red-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-red-600 transition-all cursor-pointer shrink-0"
               >
                 ⟳ Retry Connection
               </button>
@@ -295,7 +336,7 @@ export default function Home() {
           )}
 
           {loading ? (
-            <div className="py-20 text-center text-slate-400 text-sm flex flex-col items-center gap-3">
+            <div className="py-20 text-center text-slate-400 text-xs sm:text-sm flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin"></div>
               <span>Loading operational data from database...</span>
             </div>
@@ -306,24 +347,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'raw-materials' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <Wheat className="w-5 h-5 text-[#1D9E75]" /> Raw Materials Inventory (RM)
                       </h2>
-                      <p className="text-xs text-slate-400">Master stock levels, batches, and inward shipments for existing raw materials</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Master stock levels, batches, and inward shipments for raw materials</p>
                     </div>
                     <button
                       onClick={() => setModalInwardRm(true)}
-                      className="bg-[#1D9E75] hover:bg-[#168361] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-[#1D9E75] hover:bg-[#168361] text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <ArrowDownRight className="w-4 h-4" /> Log Inward / Arrived RM
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">Code</th>
@@ -337,6 +378,7 @@ export default function Home() {
                             <th className="p-3">Supplier</th>
                             <th className="p-3">Location</th>
                             <th className="p-3">Expiring</th>
+                            <th className="p-3">Entry Date</th>
                             <th className="p-3">Status</th>
                             <th className="p-3 text-center">Actions</th>
                           </tr>
@@ -344,8 +386,8 @@ export default function Home() {
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
                           {rawMaterials.length === 0 ? (
                             <tr>
-                              <td colSpan={13} className="p-8 text-center text-slate-500">
-                                No raw materials found in database.
+                              <td colSpan={14} className="p-8 text-center text-slate-500">
+                                No raw materials found matching search query.
                               </td>
                             </tr>
                           ) : (
@@ -366,6 +408,9 @@ export default function Home() {
                                 <td className="p-3">
                                   {rm.expiryDate ? new Date(rm.expiryDate).toISOString().split('T')[0] : '—'}
                                 </td>
+                                <td className="p-3 font-mono text-slate-400 text-xs">
+                                  {rm.createdAt ? new Date(rm.createdAt).toLocaleDateString() : '—'}
+                                </td>
                                 <td className="p-3">
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -381,7 +426,7 @@ export default function Home() {
                                   <div className="flex items-center justify-center gap-2">
                                     <button
                                       onClick={() => handleDeleteRM(rm.id, rm.name)}
-                                      className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                       title="Delete Raw Material"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -403,24 +448,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'packaged-materials' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <Boxes className="w-5 h-5 text-blue-400" /> Packaged Materials Inventory (PM)
                       </h2>
-                      <p className="text-xs text-slate-400">Jars, bottles, cartons, caps, and inward shipments for existing packaging supplies</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Jars, bottles, cartons, caps, and inward shipments for packaging supplies</p>
                     </div>
                     <button
                       onClick={() => setModalInwardPm(true)}
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <ArrowDownRight className="w-4 h-4" /> Log Inward / Arrived PM
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">Code</th>
@@ -442,7 +487,7 @@ export default function Home() {
                           {packagedMaterials.length === 0 ? (
                             <tr>
                               <td colSpan={13} className="p-8 text-center text-slate-500">
-                                No packaging materials found in database.
+                                No packaging materials found matching search query.
                               </td>
                             </tr>
                           ) : (
@@ -478,7 +523,7 @@ export default function Home() {
                                   <div className="flex items-center justify-center gap-2">
                                     <button
                                       onClick={() => handleDeletePM(pm.id, pm.name)}
-                                      className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                       title="Delete Packaging Material"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -500,24 +545,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'op-rm-issue' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <RefreshCw className="w-5 h-5 text-emerald-400" /> RM Issue
                       </h2>
-                      <p className="text-xs text-slate-400">Issuing raw materials to production floor (deducts RM stock atomically)</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Issuing raw materials to production floor (deducts RM stock atomically)</p>
                     </div>
                     <button
                       onClick={() => setModalRmIssue(true)}
-                      className="bg-[#1D9E75] hover:bg-[#168361] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-[#1D9E75] hover:bg-[#168361] text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Post RM Issue
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">RM Code</th>
@@ -549,14 +594,14 @@ export default function Home() {
                                   {issue.expiryDate ? new Date(issue.expiryDate).toISOString().split('T')[0] : '—'}
                                 </td>
                                 <td className="p-3 text-right font-mono text-slate-400">{issue.quantityInBatch}</td>
-                                <td className="p-3 text-right font-bold text-amber-400">-{issue.issuedStock}</td>
+                                <td className="p-3 text-right font-bold text-amber-400">{issue.issuedStock}</td>
                                 <td className="p-3 text-slate-400">
                                   {new Date(issue.issuedDate).toLocaleDateString()}
                                 </td>
                                 <td className="p-3 text-center">
                                   <button
                                     onClick={() => handleDeleteRMIssueItem(issue.id)}
-                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -576,24 +621,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'op-production' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <Factory className="w-5 h-5 text-amber-400" /> Production
                       </h2>
-                      <p className="text-xs text-slate-400">Recording FG batch production runs, outputs, and auto-adding stock</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Recording FG batch production runs, outputs, and auto-adding stock</p>
                     </div>
                     <button
                       onClick={() => setModalProduction(true)}
-                      className="bg-amber-500 hover:bg-amber-400 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-amber-500 hover:bg-amber-400 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Record Production Run
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">FG Code</th>
@@ -626,7 +671,7 @@ export default function Home() {
                                 <td className="p-3 text-center">
                                   <button
                                     onClick={() => handleDeleteProdLog(log.id)}
-                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -646,24 +691,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'op-packaging-issue' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <Box className="w-5 h-5 text-purple-400" /> Packaging Issue
                       </h2>
-                      <p className="text-xs text-slate-400">Issuing bottles, jars, pouches & cartons for production runs (deducts PM stock)</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Issuing bottles, jars, pouches & cartons for production runs (deducts PM stock)</p>
                     </div>
                     <button
                       onClick={() => setModalPackagingIssue(true)}
-                      className="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Post PM Issue
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">PM Code</th>
@@ -689,12 +734,12 @@ export default function Home() {
                                 <td className="p-3 font-semibold text-white">{issue.pmName}</td>
                                 <td className="p-3 font-semibold text-blue-400">{issue.issueFor}</td>
                                 <td className="p-3 text-right font-mono text-slate-400">{issue.quantityInBatch}</td>
-                                <td className="p-3 text-right font-bold text-purple-400">-{issue.issuedQty}</td>
+                                <td className="p-3 text-right font-bold text-purple-400">{issue.issuedQty}</td>
                                 <td className="p-3 text-slate-400">{new Date(issue.issuedDate).toLocaleDateString()}</td>
                                 <td className="p-3 text-center">
                                   <button
                                     onClick={() => handleDeletePMIssueItem(issue.id)}
-                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -714,24 +759,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'op-finished-goods' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <PackageCheck className="w-5 h-5 text-blue-400" /> Finished Goods
                       </h2>
-                      <p className="text-xs text-slate-400">Produced stock batches, shelf-life auto-calculations & warehouse locations</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Produced stock batches, shelf-life auto-calculations & warehouse locations</p>
                     </div>
                     <button
                       onClick={() => setModalInwardFg(true)}
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <ArrowDownRight className="w-4 h-4" /> Log FG Batch Stock
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">SKU</th>
@@ -771,7 +816,7 @@ export default function Home() {
                                   <div className="flex items-center justify-center gap-2">
                                     <button
                                       onClick={() => handleDeleteFG(fg.id, fg.name)}
-                                      className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                       title="Delete Finished Good"
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -793,24 +838,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'op-dispatch' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <Truck className="w-5 h-5 text-indigo-400" /> Dispatch
                       </h2>
-                      <p className="text-xs text-slate-400">Sales dispatch logs, COA status & party delivery records (deducts FG stock)</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Sales dispatch logs, COA status & party delivery records (deducts FG stock)</p>
                     </div>
                     <button
                       onClick={() => setModalDispatch(true)}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Post Dispatch
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">SKU Code</th>
@@ -839,7 +884,7 @@ export default function Home() {
                                 <td className="p-3 font-mono font-bold text-indigo-400">{disp.skuCode || '—'}</td>
                                 <td className="p-3 font-semibold text-white">{disp.productName}</td>
                                 <td className="p-3 font-mono text-slate-400">{disp.batchCode}</td>
-                                <td className="p-3 text-right font-bold text-[#1D9E75]">-{disp.dispatchQty}</td>
+                                <td className="p-3 text-right font-bold text-[#1D9E75]">{disp.dispatchQty}</td>
                                 <td className="p-3 text-slate-400">{new Date(disp.dispatchDate).toLocaleDateString()}</td>
                                 <td className="p-3 font-semibold text-white">{disp.partyName}</td>
                                 <td className="p-3">{new Date(disp.mfgDate).toISOString().split('T')[0]}</td>
@@ -853,7 +898,7 @@ export default function Home() {
                                 <td className="p-3 text-center">
                                   <button
                                     onClick={() => handleDeleteDispatchLog(disp.id)}
-                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -874,106 +919,106 @@ export default function Home() {
               {activePanel === 'add-materials' && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                       <PlusCircle className="w-5 h-5 text-[#1D9E75]" /> Add Materials / Master Entry Hub
                     </h2>
-                    <p className="text-xs text-slate-400">
-                      Centralized workspace to define brand new materials and catalog SKUs
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                      Centralized workspace to define brand new master materials and catalog SKUs
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {/* Add NEW RM Master Card */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-[#1D9E75] transition-all flex flex-col justify-between">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-[#1D9E75] transition-all flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
-                          <Wheat className="w-5 h-5" /> Add Brand New Raw Material (Master)
+                          <Wheat className="w-5 h-5 shrink-0" /> Add Brand New Raw Material (Master)
                         </div>
                         <p className="text-xs text-slate-400">Create a brand new RM SKU with code, brand name, unit, and reorder levels</p>
                       </div>
                       <button
                         onClick={() => setModalNewRm(true)}
-                        className="mt-4 w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                       >
                         <Plus className="w-4 h-4" /> Create New RM Master
                       </button>
                     </div>
 
                     {/* Add NEW PM Master Card */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-500 transition-all flex flex-col justify-between">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-500 transition-all flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-blue-400 font-bold text-base">
-                          <Boxes className="w-5 h-5" /> Add Brand New Packaging (Master)
+                          <Boxes className="w-5 h-5 shrink-0" /> Add Brand New Packaging (Master)
                         </div>
                         <p className="text-xs text-slate-400">Create a brand new bottle, jar, carton, or packaging SKU catalog record</p>
                       </div>
                       <button
                         onClick={() => setModalNewPm(true)}
-                        className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                       >
                         <Plus className="w-4 h-4" /> Create New PM Master
                       </button>
                     </div>
 
                     {/* Add NEW FG Master Card */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-400 transition-all flex flex-col justify-between">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-400 transition-all flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-blue-400 font-bold text-base">
-                          <PackageCheck className="w-5 h-5" /> Add Brand New Finished Good (Master)
+                          <PackageCheck className="w-5 h-5 shrink-0" /> Add Brand New Finished Good (Master)
                         </div>
                         <p className="text-xs text-slate-400">Register a new manufactured product SKU, shelf-life, and storage guidelines</p>
                       </div>
                       <button
                         onClick={() => setModalNewFg(true)}
-                        className="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                       >
                         <Plus className="w-4 h-4" /> Create New FG Master
                       </button>
                     </div>
 
                     {/* Quick Action: Post RM Issue */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-emerald-500 transition-all flex flex-col justify-between">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-emerald-500 transition-all flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
-                          <RefreshCw className="w-5 h-5" /> Post RM Issue to Production
+                          <RefreshCw className="w-5 h-5 shrink-0" /> Post RM Issue to Production
                         </div>
                         <p className="text-xs text-slate-400">Deduct raw material batch stock for a factory batch run</p>
                       </div>
                       <button
                         onClick={() => setModalRmIssue(true)}
-                        className="mt-4 w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                       >
                         <Plus className="w-4 h-4" /> Post RM Issue
                       </button>
                     </div>
 
                     {/* Quick Action: Record Production Run */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-amber-500 transition-all flex flex-col justify-between">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-amber-500 transition-all flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-                          <Factory className="w-5 h-5" /> Record Factory Production Run
+                          <Factory className="w-5 h-5 shrink-0" /> Record Factory Production Run
                         </div>
                         <p className="text-xs text-slate-400">Record produced batches and automatically update FG inventory stock</p>
                       </div>
                       <button
                         onClick={() => setModalProduction(true)}
-                        className="mt-4 w-full bg-amber-500 hover:bg-amber-400 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="w-full bg-amber-500 hover:bg-amber-400 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                       >
                         <Plus className="w-4 h-4" /> Record Production
                       </button>
                     </div>
 
                     {/* Quick Action: Post Customer Dispatch */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-indigo-500 transition-all flex flex-col justify-between">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-indigo-500 transition-all flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-indigo-400 font-bold text-base">
-                          <Truck className="w-5 h-5" /> Post Customer Dispatch
+                          <Truck className="w-5 h-5 shrink-0" /> Post Customer Dispatch
                         </div>
                         <p className="text-xs text-slate-400">Dispatch finished goods orders to distributors and retail clients</p>
                       </div>
                       <button
                         onClick={() => setModalDispatch(true)}
-                        className="mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                       >
                         <Plus className="w-4 h-4" /> Post Sales Dispatch
                       </button>
@@ -987,25 +1032,25 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'admin-roles' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <ShieldCheck className="w-5 h-5 text-emerald-400" /> Discord-Style Roles & Permissions
                       </h2>
-                      <p className="text-xs text-slate-400">Color-tagged roles with modular granular authority flags</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Color-tagged roles with modular granular authority flags</p>
                     </div>
                     <button
                       onClick={() => {
                         setEditingRole(null);
                         setModalRole(true);
                       }}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm cursor-pointer"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Create Custom Role
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {rolesList.map((role) => (
                       <div
                         key={role.id}
@@ -1015,7 +1060,7 @@ export default function Home() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span
-                                className="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow-sm"
+                                className="w-3.5 h-3.5 rounded-full inline-block shrink-0 shadow-xs"
                                 style={{ backgroundColor: role.colorTag || '#1D9E75' }}
                               />
                               <h3 className="font-bold text-sm text-white">{role.name}</h3>
@@ -1045,7 +1090,7 @@ export default function Home() {
                                 setEditingRole(role);
                                 setModalRole(true);
                               }}
-                              className="p-1 rounded text-slate-300 hover:bg-[#162440] hover:text-white cursor-pointer"
+                              className="p-1.5 rounded text-slate-300 hover:bg-[#162440] hover:text-white cursor-pointer"
                               title="Edit Role"
                             >
                               <Edit className="w-4 h-4" />
@@ -1053,7 +1098,7 @@ export default function Home() {
                             {!role.isSystemAdmin && (
                               <button
                                 onClick={() => handleDeleteRoleItem(role.id, role.name)}
-                                className="p-1 rounded text-red-400 hover:bg-red-500/20 cursor-pointer"
+                                className="p-1.5 rounded text-red-400 hover:bg-red-500/20 cursor-pointer"
                                 title="Delete Role"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -1072,24 +1117,24 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'admin-users' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                         <Users className="w-5 h-5 text-blue-400" /> Staff Members & Accounts
                       </h2>
-                      <p className="text-xs text-slate-400">User accounts, roles, and authorization management</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">User accounts, roles, and authorization management</p>
                     </div>
                     <button
                       onClick={() => setModalUser(true)}
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm cursor-pointer"
+                      className="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="w-4 h-4" /> Add Staff Member
                     </button>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">Staff Name</th>
@@ -1118,7 +1163,7 @@ export default function Home() {
                                     {u.role.name}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-500 font-italic">No role</span>
+                                  <span className="text-slate-500 italic">No role</span>
                                 )}
                               </td>
                               <td className="p-3">
@@ -1131,7 +1176,7 @@ export default function Home() {
                                 {u.username !== 'admin' && (
                                   <button
                                     onClick={() => handleDeleteUserItem(u.id, u.name)}
-                                    className="p-1 rounded text-red-400 hover:bg-red-500/20 cursor-pointer"
+                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 cursor-pointer"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -1152,91 +1197,91 @@ export default function Home() {
               {activePanel === 'dashboard' && (
                 <div className="space-y-6">
                   {/* Pipeline Quick Access Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
                     <div
                       onClick={() => setActivePanel('raw-materials')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <Wheat className="w-3.5 h-3.5 text-emerald-400" /> RM Items
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <Wheat className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> RM Items
                       </div>
-                      <div className="text-xl font-bold text-white">{rawMaterials.length}</div>
-                      <div className="text-[10px] text-emerald-400 font-mono">
+                      <div className="text-lg sm:text-xl font-bold text-white">{rawMaterials.length}</div>
+                      <div className="text-[10px] text-emerald-400 font-mono truncate">
                         {lowRmCount > 0 ? `${lowRmCount} Low Stock` : 'Optimal'}
                       </div>
                     </div>
 
                     <div
                       onClick={() => setActivePanel('packaged-materials')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <Boxes className="w-3.5 h-3.5 text-blue-400" /> PM Items
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <Boxes className="w-3.5 h-3.5 text-blue-400 shrink-0" /> PM Items
                       </div>
-                      <div className="text-xl font-bold text-white">{packagedMaterials.length}</div>
-                      <div className="text-[10px] text-blue-400 font-mono">
+                      <div className="text-lg sm:text-xl font-bold text-white">{packagedMaterials.length}</div>
+                      <div className="text-[10px] text-blue-400 font-mono truncate">
                         {lowPmCount > 0 ? `${lowPmCount} Low Stock` : 'Optimal'}
                       </div>
                     </div>
 
                     <div
                       onClick={() => setActivePanel('op-rm-issue')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <RefreshCw className="w-3.5 h-3.5 text-emerald-400" /> RM Issues
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <RefreshCw className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> RM Issues
                       </div>
-                      <div className="text-xl font-bold text-white">{rmIssues.length}</div>
-                      <div className="text-[10px] text-slate-400">Total Issued</div>
+                      <div className="text-lg sm:text-xl font-bold text-white">{rmIssues.length}</div>
+                      <div className="text-[10px] text-slate-400 truncate">Total Issued</div>
                     </div>
 
                     <div
                       onClick={() => setActivePanel('op-production')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-amber-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-amber-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <Factory className="w-3.5 h-3.5 text-amber-400" /> Production
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <Factory className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Production
                       </div>
-                      <div className="text-xl font-bold text-white">{productionLogs.length}</div>
-                      <div className="text-[10px] text-amber-400 font-mono">
+                      <div className="text-lg sm:text-xl font-bold text-white">{productionLogs.length}</div>
+                      <div className="text-[10px] text-amber-400 font-mono truncate">
                         {productionLogs.reduce((acc, p) => acc + (p.totalOutput || 0), 0)} Output
                       </div>
                     </div>
 
                     <div
                       onClick={() => setActivePanel('op-packaging-issue')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-purple-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-purple-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <Box className="w-3.5 h-3.5 text-purple-400" /> Packaging Issues
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <Box className="w-3.5 h-3.5 text-purple-400 shrink-0" /> PM Issues
                       </div>
-                      <div className="text-xl font-bold text-white">{packagingIssues.length}</div>
-                      <div className="text-[10px] text-slate-400">Packaging Out</div>
+                      <div className="text-lg sm:text-xl font-bold text-white">{packagingIssues.length}</div>
+                      <div className="text-[10px] text-slate-400 truncate">Packaging Out</div>
                     </div>
 
                     <div
                       onClick={() => setActivePanel('op-finished-goods')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-400 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-400 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <PackageCheck className="w-3.5 h-3.5 text-blue-400" /> Finished Goods
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <PackageCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Finished Goods
                       </div>
-                      <div className="text-xl font-bold text-white">{finishedGoods.length}</div>
-                      <div className="text-[10px] text-emerald-400 font-mono">
+                      <div className="text-lg sm:text-xl font-bold text-white">{finishedGoods.length}</div>
+                      <div className="text-[10px] text-emerald-400 font-mono truncate">
                         {finishedGoods.reduce((acc, f) => acc + (f.totalStock || 0), 0)} Units
                       </div>
                     </div>
 
                     <div
                       onClick={() => setActivePanel('op-dispatch')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-indigo-500 p-3 rounded-xl cursor-pointer transition-all space-y-1"
+                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-indigo-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1 col-span-2 sm:col-span-1"
                     >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                        <Truck className="w-3.5 h-3.5 text-indigo-400" /> Dispatches
+                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
+                        <Truck className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> Dispatches
                       </div>
-                      <div className="text-xl font-bold text-white">{dispatches.length}</div>
-                      <div className="text-[10px] text-indigo-400 font-mono">
-                        {dispatches.reduce((acc, d) => acc + (d.dispatchQty || 0), 0)} Dispatched
+                      <div className="text-lg sm:text-xl font-bold text-white">{dispatches.length}</div>
+                      <div className="text-[10px] text-indigo-400 font-mono truncate">
+                        {dispatches.reduce((acc, d) => acc + (d.dispatchQty || 0), 0)} Out
                       </div>
                     </div>
                   </div>
@@ -1244,7 +1289,7 @@ export default function Home() {
                   {/* Production & Dispatch Overview */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Recent Production Logs */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 space-y-3">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 sm:p-5 space-y-3">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <Factory className="w-4 h-4 text-amber-400" /> Recent Production Runs
@@ -1262,13 +1307,13 @@ export default function Home() {
                             key={log.id}
                             className="bg-[#162440]/60 border border-[#2A3F66] p-3 rounded-lg flex items-center justify-between text-xs"
                           >
-                            <div>
-                              <div className="font-bold text-white">{log.fgName}</div>
+                            <div className="min-w-0 pr-2">
+                              <div className="font-bold text-white truncate">{log.fgName}</div>
                               <div className="text-[10px] text-slate-400 font-mono">
                                 Code: {log.fgCode} | Batches: {log.totalBatchesMade}
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                               <span className="font-bold text-emerald-400">+{log.totalOutput} {log.unit}</span>
                               <div className="text-[10px] text-slate-400">
                                 {new Date(log.createdAt).toLocaleDateString()}
@@ -1280,7 +1325,7 @@ export default function Home() {
                     </div>
 
                     {/* Recent Dispatches */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 space-y-3">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-4 sm:p-5 space-y-3">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <Truck className="w-4 h-4 text-indigo-400" /> Recent Dispatches
@@ -1298,12 +1343,12 @@ export default function Home() {
                             key={disp.id}
                             className="bg-[#162440]/60 border border-[#2A3F66] p-3 rounded-lg flex items-center justify-between text-xs"
                           >
-                            <div>
-                              <div className="font-bold text-white">{disp.productName}</div>
-                              <div className="text-[10px] text-slate-400">Party: {disp.partyName}</div>
+                            <div className="min-w-0 pr-2">
+                              <div className="font-bold text-white truncate">{disp.productName}</div>
+                              <div className="text-[10px] text-slate-400 truncate">Party: {disp.partyName}</div>
                             </div>
-                            <div className="text-right">
-                              <span className="font-bold text-[#1D9E75]">-{disp.dispatchQty}</span>
+                            <div className="text-right shrink-0">
+                              <span className="font-bold text-[#1D9E75]">{disp.dispatchQty}</span>
                               <div className="text-[10px] text-slate-400">
                                 {new Date(disp.dispatchDate).toLocaleDateString()}
                               </div>
@@ -1322,15 +1367,15 @@ export default function Home() {
               {activePanel === 'po-suggestions' && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5 text-amber-400" /> Purchase Order (PO) Suggestions
                     </h2>
-                    <p className="text-xs text-slate-400">Automated replenishment suggestions based on reorder thresholds</p>
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Automated replenishment suggestions based on reorder thresholds</p>
                   </div>
 
-                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs">
+                      <table className="w-full text-left border-collapse text-xs sm:text-sm">
                         <thead>
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">Type</th>
@@ -1387,34 +1432,34 @@ export default function Home() {
               {activePanel === 'reports' && reportsData && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                       <Layers className="w-5 h-5 text-blue-400" /> MES Factory Reports & Summaries
                     </h2>
-                    <p className="text-xs text-slate-400">Inventory valuation, turnover ratios, production yields & dispatch rates</p>
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Inventory valuation, turnover ratios, production yields & dispatch rates</p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 sm:p-5 rounded-xl space-y-1">
                       <div className="text-xs text-slate-400 font-medium">Total Raw Materials Stock</div>
-                      <div className="text-2xl font-bold text-emerald-400">
+                      <div className="text-xl sm:text-2xl font-bold text-emerald-400 font-mono">
                         {reportsData.summary?.totalRMStock || 0} KG
                       </div>
                     </div>
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 sm:p-5 rounded-xl space-y-1">
                       <div className="text-xs text-slate-400 font-medium">Total Packaging Stock</div>
-                      <div className="text-2xl font-bold text-blue-400">
+                      <div className="text-xl sm:text-2xl font-bold text-blue-400 font-mono">
                         {reportsData.summary?.totalPMStock || 0} Units
                       </div>
                     </div>
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 sm:p-5 rounded-xl space-y-1">
                       <div className="text-xs text-slate-400 font-medium">Finished Goods Inventory</div>
-                      <div className="text-2xl font-bold text-amber-400">
+                      <div className="text-xl sm:text-2xl font-bold text-amber-400 font-mono">
                         {reportsData.summary?.totalFGStock || 0} Units
                       </div>
                     </div>
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 rounded-xl space-y-1">
+                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] p-4 sm:p-5 rounded-xl space-y-1">
                       <div className="text-xs text-slate-400 font-medium">Total Lifetime Dispatches</div>
-                      <div className="text-2xl font-bold text-indigo-400">
+                      <div className="text-xl sm:text-2xl font-bold text-indigo-400 font-mono">
                         {reportsData.summary?.totalDispatched || 0} Units
                       </div>
                     </div>
@@ -1428,14 +1473,14 @@ export default function Home() {
               {activePanel === 'alerts' && (
                 <div className="space-y-4">
                   <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5 text-amber-400" /> Factory Floor Real-time Alerts
                     </h2>
-                    <p className="text-xs text-slate-400">Critical reorder warnings, low stock and quality notices</p>
+                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">Critical reorder warnings, low stock and quality notices</p>
                   </div>
 
                   {totalAlertsCount === 0 ? (
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-8 rounded-xl text-center text-emerald-300">
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-6 sm:p-8 rounded-xl text-center text-emerald-300">
                       <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
                       <div className="font-bold text-base text-white">All Inventory Healthy</div>
                       <p className="text-xs mt-1">No raw or packaged materials are below reorder thresholds.</p>
@@ -1447,7 +1492,7 @@ export default function Home() {
                         .map((r) => (
                           <div
                             key={r.id}
-                            className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl flex items-center justify-between text-amber-300"
+                            className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-300"
                           >
                             <div className="space-y-1">
                               <div className="font-bold text-sm text-white">
@@ -1460,7 +1505,7 @@ export default function Home() {
                             </div>
                             <button
                               onClick={() => setActivePanel('po-suggestions')}
-                              className="bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-amber-400 transition-all cursor-pointer"
+                              className="bg-amber-500 text-white font-bold px-3 py-2 rounded-lg text-xs hover:bg-amber-400 transition-all cursor-pointer w-full sm:w-auto shrink-0"
                             >
                               Generate PO
                             </button>
@@ -1472,7 +1517,7 @@ export default function Home() {
                         .map((p) => (
                           <div
                             key={p.id}
-                            className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl flex items-center justify-between text-blue-300"
+                            className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-blue-300"
                           >
                             <div className="space-y-1">
                               <div className="font-bold text-sm text-white">
@@ -1485,7 +1530,7 @@ export default function Home() {
                             </div>
                             <button
                               onClick={() => setActivePanel('po-suggestions')}
-                              className="bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-blue-400 transition-all cursor-pointer"
+                              className="bg-blue-500 text-white font-bold px-3 py-2 rounded-lg text-xs hover:bg-blue-400 transition-all cursor-pointer w-full sm:w-auto shrink-0"
                             >
                               Generate PO
                             </button>

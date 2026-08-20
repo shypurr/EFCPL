@@ -154,43 +154,45 @@ async function main() {
 
   // 4. SAMPLE SEED DATA FOR INVENTORY & OPERATIONS
   console.log('📦 Seeding sample Raw Materials...');
-  await prisma.rawMaterial.upsert({
-    where: { code: 'RM001' },
-    update: {},
-    create: {
-      code: 'RM001',
-      name: 'Refined Sugar (Grade A)',
-      brand: 'Madhur Pure',
-      batchNumber: 'B-SUG-2026-01',
-      stock: 4500,
-      unit: 'KG',
-      reorderLevel: 1000,
-      maxStock: 10000,
-      supplier: 'Sahakar Sugar Mills',
-      location: 'Cold Room Zone A',
-      expiryDate: new Date('2027-08-30'),
-      status: 'Active',
-    },
-  });
+  const rm1 = await prisma.rawMaterial.findFirst({ where: { code: 'RM001' } });
+  if (!rm1) {
+    await prisma.rawMaterial.create({
+      data: {
+        code: 'RM001',
+        name: 'Refined Sugar (Grade A)',
+        brand: 'Madhur Pure',
+        batchNumber: 'B-SUG-2026-01',
+        stock: 4500,
+        unit: 'KG',
+        reorderLevel: 1000,
+        maxStock: 10000,
+        supplier: 'Sahakar Sugar Mills',
+        location: 'Cold Room Zone A',
+        expiryDate: new Date('2027-08-30'),
+        status: 'Active',
+      },
+    });
+  }
 
-  await prisma.rawMaterial.upsert({
-    where: { code: 'RM002' },
-    update: {},
-    create: {
-      code: 'RM002',
-      name: 'Mango Pulp Puree',
-      brand: 'Alphonso Premium',
-      batchNumber: 'B-MNG-2026-04',
-      stock: 1200,
-      unit: 'LTR',
-      reorderLevel: 500,
-      maxStock: 5000,
-      supplier: 'Konkan Agro Tech',
-      location: 'Deep Freeze -18°C',
-      expiryDate: new Date('2026-12-15'),
-      status: 'Active',
-    },
-  });
+  const rm2 = await prisma.rawMaterial.findFirst({ where: { code: 'RM002' } });
+  if (!rm2) {
+    await prisma.rawMaterial.create({
+      data: {
+        code: 'RM002',
+        name: 'Mango Pulp Puree',
+        brand: 'Alphonso Premium',
+        batchNumber: 'B-MNG-2026-04',
+        stock: 1200,
+        unit: 'LTR',
+        reorderLevel: 500,
+        maxStock: 5000,
+        supplier: 'Konkan Agro Tech',
+        location: 'Deep Freeze -18°C',
+        expiryDate: new Date('2026-12-15'),
+        status: 'Active',
+      },
+    });
+  }
 
   console.log('📦 Seeding sample Packaging Materials...');
   await prisma.packagingMaterial.upsert({

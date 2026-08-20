@@ -15,7 +15,7 @@ export async function importRawMaterialsCSV(rows: CSVImportRow[]) {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const code = row['Code'] || row['code'] || row['RM Code'] || `RM-CSV-${i + 1}`;
+      const code = (row['Code'] || row['code'] || row['RM Code'] || `RM-CSV-${i + 1}`).trim().toUpperCase();
       const name = row['Name'] || row['name'] || row['Material Name'] || row['materialName'];
 
       if (!name) {
@@ -29,36 +29,46 @@ export async function importRawMaterialsCSV(rows: CSVImportRow[]) {
       const reorderLevel = parseFloat(row['Reorder Level'] || row['reorderLevel'] || '0') || 0;
 
       try {
-        await prisma.rawMaterial.upsert({
-          where: { code: code.trim().toUpperCase() },
-          update: {
-            name: name.trim(),
-            brand: row['Brand'] || row['brand'] || null,
-            batchNumber: row['Batch Number'] || row['batchNumber'] || `BATCH-${Date.now().toString().slice(-4)}`,
-            stock,
-            unit,
-            reorderLevel,
-            maxStock: row['Max Stock'] ? parseFloat(row['Max Stock']) : null,
-            supplier: row['Supplier'] || row['supplier'] || null,
-            location: row['Location'] || row['location'] || null,
-            expiryDate: row['Expiry Date'] || row['expiryDate'] ? new Date(row['Expiry Date'] || row['expiryDate']) : null,
-            status: stock <= reorderLevel ? 'Low Stock' : 'Active',
-          },
-          create: {
-            code: code.trim().toUpperCase(),
-            name: name.trim(),
-            brand: row['Brand'] || row['brand'] || null,
-            batchNumber: row['Batch Number'] || row['batchNumber'] || `BATCH-${Date.now().toString().slice(-4)}`,
-            stock,
-            unit,
-            reorderLevel,
-            maxStock: row['Max Stock'] ? parseFloat(row['Max Stock']) : null,
-            supplier: row['Supplier'] || row['supplier'] || null,
-            location: row['Location'] || row['location'] || null,
-            expiryDate: row['Expiry Date'] || row['expiryDate'] ? new Date(row['Expiry Date'] || row['expiryDate']) : null,
-            status: stock <= reorderLevel ? 'Low Stock' : 'Active',
-          },
+        const existing = await prisma.rawMaterial.findFirst({
+          where: { code },
+          orderBy: { createdAt: 'desc' },
         });
+
+        if (existing) {
+          await prisma.rawMaterial.update({
+            where: { id: existing.id },
+            data: {
+              name: name.trim(),
+              brand: row['Brand'] || row['brand'] || null,
+              batchNumber: row['Batch Number'] || row['batchNumber'] || `BATCH-${Date.now().toString().slice(-4)}`,
+              stock,
+              unit,
+              reorderLevel,
+              maxStock: row['Max Stock'] ? parseFloat(row['Max Stock']) : null,
+              supplier: row['Supplier'] || row['supplier'] || null,
+              location: row['Location'] || row['location'] || null,
+              expiryDate: row['Expiry Date'] || row['expiryDate'] ? new Date(row['Expiry Date'] || row['expiryDate']) : null,
+              status: stock <= reorderLevel ? 'Low Stock' : 'Active',
+            },
+          });
+        } else {
+          await prisma.rawMaterial.create({
+            data: {
+              code,
+              name: name.trim(),
+              brand: row['Brand'] || row['brand'] || null,
+              batchNumber: row['Batch Number'] || row['batchNumber'] || `BATCH-${Date.now().toString().slice(-4)}`,
+              stock,
+              unit,
+              reorderLevel,
+              maxStock: row['Max Stock'] ? parseFloat(row['Max Stock']) : null,
+              supplier: row['Supplier'] || row['supplier'] || null,
+              location: row['Location'] || row['location'] || null,
+              expiryDate: row['Expiry Date'] || row['expiryDate'] ? new Date(row['Expiry Date'] || row['expiryDate']) : null,
+              status: stock <= reorderLevel ? 'Low Stock' : 'Active',
+            },
+          });
+        }
         importedCount++;
       } catch (err: any) {
         skippedCount++;
@@ -81,7 +91,7 @@ export async function importPackagingMaterialsCSV(rows: CSVImportRow[]) {
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const code = row['Code'] || row['code'] || row['PM Code'] || `PM-CSV-${i + 1}`;
+      const code = (row['Code'] || row['code'] || row['PM Code'] || `PM-CSV-${i + 1}`).trim().toUpperCase();
       const name = row['Name'] || row['name'] || row['Material Name'] || row['materialName'];
 
       if (!name) {
@@ -96,7 +106,7 @@ export async function importPackagingMaterialsCSV(rows: CSVImportRow[]) {
 
       try {
         await prisma.packagingMaterial.upsert({
-          where: { code: code.trim().toUpperCase() },
+          where: { code },
           update: {
             name: name.trim(),
             brand: row['Brand'] || row['brand'] || null,
@@ -111,7 +121,7 @@ export async function importPackagingMaterialsCSV(rows: CSVImportRow[]) {
             status: stock <= reorderLevel ? 'Low Stock' : 'Active',
           },
           create: {
-            code: code.trim().toUpperCase(),
+            code,
             name: name.trim(),
             brand: row['Brand'] || row['brand'] || null,
             batchNumber: row['Batch Number'] || row['batchNumber'] || `BATCH-${Date.now().toString().slice(-4)}`,

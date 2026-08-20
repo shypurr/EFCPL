@@ -44,48 +44,47 @@ model StorageLocation {
 // ==========================================
 
 model RawMaterial {
-  id           String   @id @default(cuid())
-  code         String   @unique // e.g. RM001
+  id           String    @id @default(cuid())
+  code         String    // e.g. RM001 (allows multiple arrival entries for the same material code)
   name         String
   brand        String?
   batchNumber  String
-  stock        Float    @default(0)
-  unit         String   // e.g. KG, LTR
-  reorderLevel Float    @default(0)
+  stock        Float     @default(0)
+  unit         String    // e.g. KG, LTR, Units, Boxes
+  reorderLevel Float     @default(0)
   maxStock     Float?
   supplier     String?
   location     String?
   expiryDate   DateTime?
-  status       String   @default("Active") // Active, Low Stock, Expired
+  status       String    @default("Active") // Active, Low Stock, Expired
   attributes   Json?
   remarks      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  rmIssues     RMIssue[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([code])
   @@index([name])
+  @@index([createdAt])
 }
 
 model PackagingMaterial {
-  id           String   @id @default(cuid())
-  code         String   @unique // e.g. PM001
+  id           String    @id @default(cuid())
+  code         String    @unique // e.g. PM001
   name         String
   brand        String?
   batchNumber  String
-  stock        Float    @default(0)
-  unit         String   @default("Units")
-  reorderLevel Float    @default(0)
+  stock        Float     @default(0)
+  unit         String    @default("Units")
+  reorderLevel Float     @default(0)
   maxStock     Float?
   supplier     String?
   location     String?
   expiryDate   DateTime?
-  status       String   @default("Active")
+  status       String    @default("Active")
   attributes   Json?
   remarks      String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   pmIssues     PackagingIssue[]
 
@@ -99,19 +98,18 @@ model PackagingMaterial {
 
 // Tab 1: RM Issue
 model RMIssue {
-  id               String       @id @default(cuid())
+  id               String    @id @default(cuid())
   rmCode           String?
-  rawMaterial      RawMaterial? @relation(fields: [rmCode], references: [code], onDelete: SetNull)
   materialName     String
   batchNumber      String
-  issueFor         String       // FG Name / FG Code target
+  issueFor         String    // FG Name / FG Code target
   expiryDate       DateTime?
-  quantityInBatch  Float        @default(0)
+  quantityInBatch  Float     @default(0)
   issuedStock      Float
-  issuedDate       DateTime     @default(now())
+  issuedDate       DateTime  @default(now())
   remarks          String?
-  issuedBy         String       @default("Store Manager")
-  createdAt        DateTime     @default(now())
+  issuedBy         String    @default("Store Manager")
+  createdAt        DateTime  @default(now())
 
   @@index([rmCode])
   @@index([issuedDate])
@@ -156,20 +154,20 @@ model PackagingIssue {
 
 // Tab 4: Finished Goods (FG Master & Batch Stock)
 model FinishedGood {
-  id               String   @id @default(cuid())
-  sku              String   @unique // FG Code / SKU
+  id               String     @id @default(cuid())
+  sku              String     @unique // FG Code / SKU
   name             String
   batchNumber      String
-  quantityProduced Float    @default(0)
-  totalStock       Float    @default(0)
-  unit             String   @default("KG")
+  quantityProduced Float      @default(0)
+  totalStock       Float      @default(0)
+  unit             String     @default("KG")
   mfgDate          DateTime
   expiryDate       DateTime
-  shelfLifeDays    Int      // Auto-calculated: Expiry - MFG in days
+  shelfLifeDays    Int        // Auto-calculated: Expiry - MFG in days
   location         String?
-  status           String   @default("In Stock")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  status           String     @default("In Stock")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   dispatches       Dispatch[]
 
@@ -238,15 +236,15 @@ model RolePermission {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  username      String   @unique
+  id            String     @id @default(cuid())
+  username      String     @unique
   name          String
   passwordHash  String
   roleId        String?
-  role          Role?    @relation(fields: [roleId], references: [id], onDelete: SetNull)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  role          Role?      @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   auditLogs     AuditLog[]
 }

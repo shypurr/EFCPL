@@ -51,14 +51,25 @@ export default function ProductionModal({
     }
   };
 
+  const handleNumberChange = (field: 'totalBatchesMade' | 'totalOutput' | 'wastage', val: string) => {
+    if (val === '') {
+      setFormData((prev) => ({ ...prev, [field]: '' }));
+      return;
+    }
+    const num = Number(val);
+    if (num < 0 || isNaN(num)) return;
+    setFormData((prev) => ({ ...prev, [field]: val }));
+  };
+
   const mfgTime = formData.mfgDate ? new Date(formData.mfgDate).getTime() : 0;
   const expTime = formData.expiryDate ? new Date(formData.expiryDate).getTime() : 0;
   const computedShelfLife = mfgTime && expTime ? Math.max(0, Math.ceil((expTime - mfgTime) / (1000 * 60 * 60 * 24))) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fgCode || !formData.totalOutput || !formData.expiryDate) {
-      alert('Please select FG Code, enter Total Output, and Expiry Date');
+    const outputNum = Number(formData.totalOutput);
+    if (!formData.fgCode || formData.totalOutput === '' || outputNum <= 0 || !formData.expiryDate) {
+      alert('Please select FG Code, enter a valid Total Output (> 0), and Expiry Date');
       return;
     }
 
@@ -66,10 +77,10 @@ export default function ProductionModal({
     const res = await createProductionLog({
       fgCode: formData.fgCode,
       fgName: formData.fgName,
-      totalBatchesMade: Number(formData.totalBatchesMade),
-      totalOutput: Number(formData.totalOutput),
+      totalBatchesMade: Math.max(1, Number(formData.totalBatchesMade) || 1),
+      totalOutput: outputNum,
       unit: formData.unit,
-      wastage: Number(formData.wastage) || 0,
+      wastage: Math.max(0, Number(formData.wastage) || 0),
       mfgDate: formData.mfgDate,
       expiryDate: formData.expiryDate,
       batchNumber: formData.batchNumber,
@@ -101,32 +112,44 @@ export default function ProductionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto text-white">
-        <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Factory className="w-5 h-5 text-amber-400" /> Record Factory Production Run
-            </h3>
-            <p className="text-xs text-slate-400">Log batch output, batches made, wastage, and automatically add to FG inventory</p>
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden text-white animate-in fade-in zoom-in duration-150">
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Factory className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
+                Record Finished Good Production Run
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                Log completed food processing batch output into warehouse stock
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#162440] rounded-lg transition-colors cursor-pointer shrink-0"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* FG Code Dropdown */}
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Select FG Code *</label>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Select FG SKU Code *</label>
               <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono transition-all"
                 value={formData.fgCode}
                 onChange={(e) => handleFgSelect(e.target.value)}
                 required
               >
-                <option value="" className="bg-[#162440] text-slate-400">-- Choose FG Product --</option>
+                <option value="" className="bg-[#162440] text-slate-400">-- Choose FG SKU --</option>
                 {finishedGoods.map((fg) => (
                   <option key={fg.id} value={fg.sku} className="bg-[#162440] text-white">
                     {fg.sku} — {fg.name}
@@ -135,12 +158,12 @@ export default function ProductionModal({
               </select>
             </div>
 
-            {/* Finished Good Name (Auto-filled but editable) */}
-            <div>
+            {/* Finished Good Name */}
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Finished Good Name *</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                placeholder="Select FG code to auto-fill"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                placeholder="Product name"
                 value={formData.fgName}
                 onChange={(e) => setFormData({ ...formData, fgName: e.target.value })}
                 required
@@ -148,70 +171,71 @@ export default function ProductionModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Total Batches Made *</label>
               <input
                 type="number"
-                min="1"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono"
-                placeholder="e.g. 5"
+                min="0"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono transition-all"
                 value={formData.totalBatchesMade}
-                onChange={(e) => setFormData({ ...formData, totalBatchesMade: e.target.value })}
+                onChange={(e) => handleNumberChange('totalBatchesMade', e.target.value)}
                 required
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Total Output Produced *</label>
               <input
                 type="number"
+                min="0"
                 step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-bold text-emerald-400"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none font-bold text-emerald-400 transition-all"
                 placeholder="e.g. 500"
                 value={formData.totalOutput}
-                onChange={(e) => setFormData({ ...formData, totalOutput: e.target.value })}
+                onChange={(e) => handleNumberChange('totalOutput', e.target.value)}
                 required
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Wastage</label>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
               <input
-                type="number"
-                step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-red-400 font-mono"
-                placeholder="0"
-                value={formData.wastage}
-                onChange={(e) => setFormData({ ...formData, wastage: e.target.value })}
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-slate-300 font-mono"
+                value={formData.unit}
+                readOnly
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Wastage / Scrap Qty</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-slate-300 font-mono"
-                value={formData.unit}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                type="number"
+                min="0"
+                step="any"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono transition-all"
+                placeholder="e.g. 5"
+                value={formData.wastage}
+                onChange={(e) => handleNumberChange('wastage', e.target.value)}
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Production Batch Number</label>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Production Batch No</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none font-mono"
-                placeholder="FGB-2026-99"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono transition-all"
+                placeholder="Auto-generated or custom"
                 value={formData.batchNumber}
                 onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Operator / Supervisor</label>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Shift In-Charge / Operator</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
                 placeholder="Operator name"
                 value={formData.operator}
                 onChange={(e) => setFormData({ ...formData, operator: e.target.value })}
@@ -219,61 +243,69 @@ export default function ProductionModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">MFG Date *</label>
               <input
                 type="date"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all"
                 value={formData.mfgDate}
                 onChange={(e) => setFormData({ ...formData, mfgDate: e.target.value })}
                 required
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date *</label>
               <input
                 type="date"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-amber-500 outline-none transition-all"
                 value={formData.expiryDate}
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                 required
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Calculated Shelf Life</label>
-              <div className="w-full text-xs p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-emerald-400 font-bold">
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Auto Shelf Life</label>
+              <div className="w-full text-xs sm:text-sm p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-emerald-400 font-bold flex items-center h-[38px] sm:h-[42px]">
                 {computedShelfLife > 0 ? `${computedShelfLife} Days` : '—'}
               </div>
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
             <input
-              className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-              placeholder="Recipe version, line number, or shift details..."
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+              placeholder="Recipe formulation code, test results..."
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
           </div>
 
-          <div className="pt-3 border-t border-[#1E2F4A] flex justify-end gap-2">
+          {/* Action Buttons */}
+          <div className="pt-3 border-t border-[#1E2F4A] flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-400 rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-amber-500 hover:bg-amber-400 rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              {loading ? 'Recording...' : 'Record Production Run'}
+              {loading ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Recording...</span>
+                </>
+              ) : (
+                'Record Production Run'
+              )}
             </button>
           </div>
         </form>

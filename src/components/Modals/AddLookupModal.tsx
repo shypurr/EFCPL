@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Settings } from 'lucide-react';
 import { createSystemLookup } from '@/actions/lookups';
 
 interface ModalProps {
@@ -47,20 +47,26 @@ export default function AddLookupModal({ isOpen, onClose, onSuccess }: ModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-slate-200">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h3 className="text-base font-bold text-slate-900">⚙️ Add Dynamic Master Lookup Option</h3>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+      <div className="bg-[#0D1B2E] rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto border border-[#1E2F4A] text-white animate-in fade-in zoom-in duration-150">
+        <div className="p-4 sm:p-5 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
+          <div className="flex items-center gap-2">
+            <Settings className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-sm sm:text-base font-bold text-white">Add Master Lookup Option</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#162440] rounded-lg transition-colors cursor-pointer"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Lookup Category / Type *</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Lookup Category / Type *</label>
             <select
-              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white font-medium"
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-medium transition-all"
               value={formData.group}
               onChange={(e) => setFormData({ ...formData, group: e.target.value })}
             >
@@ -72,9 +78,9 @@ export default function AddLookupModal({ isOpen, onClose, onSuccess }: ModalProp
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Code / Value *</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Code / Value *</label>
             <input
-              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all font-mono"
               placeholder="e.g. DRUM or BARREL"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
@@ -83,9 +89,9 @@ export default function AddLookupModal({ isOpen, onClose, onSuccess }: ModalProp
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Display Label *</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Display Label *</label>
             <input
-              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
               placeholder="e.g. 200L Steel Drum"
               value={formData.label}
               onChange={(e) => setFormData({ ...formData, label: e.target.value })}
@@ -94,27 +100,27 @@ export default function AddLookupModal({ isOpen, onClose, onSuccess }: ModalProp
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1">Sort Order</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Sort Order</label>
             <input
               type="number"
-              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
               value={formData.sortOrder}
               onChange={(e) => setFormData({ ...formData, sortOrder: e.target.value })}
             />
           </div>
 
-          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+          <div className="pt-3 border-t border-[#1E2F4A] flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+              className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#0F6E56] rounded-lg shadow-2xs"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Saving...' : 'Add Dynamic Option'}
             </button>

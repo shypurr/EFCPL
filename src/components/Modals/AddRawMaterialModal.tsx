@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Wheat } from 'lucide-react';
 import { createRawMaterial } from '@/actions/raw-materials';
 
 interface ModalProps {
@@ -16,7 +16,9 @@ export default function AddRawMaterialModal({
   isOpen,
   onClose,
   units = [
-    { code: 'KG', label: 'Kilograms (KG)' },
+    { code: 'KG', label: 'KG' },
+    { code: 'Units', label: 'Units' },
+    { code: 'Boxes', label: 'Boxes' },
     { code: 'GM', label: 'Grams (GM)' },
     { code: 'LTR', label: 'Liters (LTR)' },
     { code: 'ML', label: 'Milliliters (ML)' },
@@ -47,10 +49,23 @@ export default function AddRawMaterialModal({
 
   if (!isOpen) return null;
 
+  const handleNumberChange = (field: 'stock' | 'reorderLevel' | 'maxStock', val: string) => {
+    if (val === '') {
+      setFormData((prev) => ({ ...prev, [field]: '' }));
+      return;
+    }
+    const num = Number(val);
+    if (num < 0 || isNaN(num)) return;
+    setFormData((prev) => ({ ...prev, [field]: val }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.code || !formData.name || !formData.stock || !formData.reorderLevel) {
-      alert('Please fill in required fields (Code, Name, Current Stock, Reorder Level)');
+    const stockNum = Number(formData.stock);
+    const reorderNum = Number(formData.reorderLevel);
+
+    if (!formData.code || !formData.name || formData.stock === '' || stockNum < 0 || formData.reorderLevel === '' || reorderNum < 0) {
+      alert('Please fill in required fields with valid non-negative numbers (Code, Name, Stock, Reorder Level)');
       return;
     }
 
@@ -60,9 +75,9 @@ export default function AddRawMaterialModal({
       name: formData.name,
       brand: formData.brand,
       batchNumber: formData.batchNumber || `BATCH-${Date.now().toString().slice(-4)}`,
-      stock: Number(formData.stock),
+      stock: stockNum,
       unit: formData.unit || 'KG',
-      reorderLevel: Number(formData.reorderLevel),
+      reorderLevel: reorderNum,
       maxStock: formData.maxStock ? Number(formData.maxStock) : undefined,
       supplier: formData.supplier,
       location: formData.location,
@@ -95,46 +110,58 @@ export default function AddRawMaterialModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto text-white">
-        <div className="p-4 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              🌾 Add Brand New Raw Material (Catalog Item)
-            </h3>
-            <p className="text-xs text-slate-400">Define a new raw material master record in the system</p>
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+      <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden text-white animate-in fade-in zoom-in duration-150">
+        {/* Header */}
+        <div className="p-4 sm:p-5 border-b border-[#1E2F4A] flex items-center justify-between sticky top-0 bg-[#0D1B2E] z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <Wheat className="w-4 h-4 sm:w-5 sm:h-5 text-[#1D9E75]" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
+                Add Brand New Raw Material (Catalog Item)
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                Define a new raw material master record in the system
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-[#162440] rounded-lg transition-colors cursor-pointer shrink-0"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Code *</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono transition-all"
                 placeholder="RM009"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 required
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Material Name *</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 placeholder="Coriander Powder"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
-            <div>
+            <div className="min-w-0 sm:col-span-2 md:col-span-1">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 placeholder="Everest / MDH"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
@@ -142,23 +169,24 @@ export default function AddRawMaterialModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Current Stock Qty *</label>
               <input
                 type="number"
+                min="0"
                 step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all font-bold text-emerald-400"
                 placeholder="100"
                 value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                onChange={(e) => handleNumberChange('stock', e.target.value)}
                 required
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
               <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] outline-none font-medium transition-all"
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
               >
@@ -169,45 +197,47 @@ export default function AddRawMaterialModal({
                 ))}
               </select>
             </div>
-            <div>
+            <div className="min-w-0 sm:col-span-2 md:col-span-1">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Reorder Level *</label>
               <input
                 type="number"
+                min="0"
                 step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 placeholder="50"
                 value={formData.reorderLevel}
-                onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+                onChange={(e) => handleNumberChange('reorderLevel', e.target.value)}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Max Stock Level</label>
               <input
                 type="number"
+                min="0"
                 step="any"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 placeholder="500"
                 value={formData.maxStock}
-                onChange={(e) => setFormData({ ...formData, maxStock: e.target.value })}
+                onChange={(e) => handleNumberChange('maxStock', e.target.value)}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 placeholder="ABC Agro Pune"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               />
             </div>
-            <div>
+            <div className="min-w-0 sm:col-span-2 md:col-span-1">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number</label>
               <input
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono transition-all"
                 placeholder="B2025-999"
                 value={formData.batchNumber}
                 onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
@@ -215,11 +245,11 @@ export default function AddRawMaterialModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
               <select
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               >
@@ -230,41 +260,49 @@ export default function AddRawMaterialModal({
                 ))}
               </select>
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
               <input
                 type="date"
-                className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 value={formData.expiryDate}
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
               />
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
             <input
-              className="w-full text-xs p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none"
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
               placeholder="Optional notes or specifications..."
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
           </div>
 
-          <div className="pt-3 border-t border-[#1E2F4A] flex justify-end gap-2">
+          {/* Action Buttons */}
+          <div className="pt-3 border-t border-[#1E2F4A] flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-[#1D9E75] hover:bg-[#168361] rounded-lg shadow-sm transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              {loading ? 'Creating...' : 'Create Master Material'}
+              {loading ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Creating...</span>
+                </>
+              ) : (
+                'Create Master Material'
+              )}
             </button>
           </div>
         </form>

@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EFCPL Manufacturing Execution System (MES) & Inventory Management Platform
 
-## Getting Started
+> **Exotic Food Processing Private Limited (EFCPL)** — Food Processing, Cold-Chain Inventory & Operations Pipeline.
 
-First, run the development server:
+A modern, production-grade web application built with **Next.js 16 (App Router)**, **React 19**, **Prisma ORM v7**, **Tailwind CSS v4**, and **TypeScript**.
 
+---
+
+## 🌟 Key Features
+
+### 📦 1. Inventory Management
+* **Raw Materials (RM)**:
+  * **Discrete Batch Logging**: Every incoming shipment creates a separate batch entry rather than merging stock.
+  * **Chronological Sorting**: Reverse-chronological table display (`latest entries on top`) with arrival timestamps.
+  * **Status Monitoring**: Dynamic low-stock and near-expiry indicators.
+* **Packaged Materials (PM)**:
+  * Master tracking for glass jars, bottles, caps, pouches, cartons, and packaging supplies.
+
+### ⚙️ 2. Operations Pipelines (5 Standalone Workflows)
+1. **RM Issue**: Deduct raw agricultural commodities to production batches with dynamic Target FG selector.
+2. **Production Log**: Track manufactured food runs with batch counts, total output, wastage, and operator records.
+3. **Packaging Issue**: Issue packaging supplies linked directly to production runs.
+4. **Finished Goods (FG)**: Cold storage inventory tracking with **auto-calculated shelf life** ($\text{Expiry} - \text{MFG}$).
+5. **Dispatch Log**: Customer/distributor shipments with positive quantities, batch codes, and Certificate of Analysis (CoA) status.
+
+### 🛡️ 3. Role-Based Access Control (RBAC) & Security
+* Discord-style permission toggle matrix across modules (`inventory`, `operations`, `reports`, `admin`).
+* Staff user provisioning with hashed credentials.
+* Mutation audit logging.
+
+### 🛡️ 4. Data Integrity & Usability Safeguards
+* **Universal Non-Negative Input Enforcement**: All number inputs locked to $\ge 0$ with `min="0"` and keystroke guards.
+* **Changeable Unit Dropdown**: Pre-populates unit from catalog with changeable dropdown (`KG`, `Units`, `Boxes`).
+* **Multi-Device Responsive Dark UI**: Optimized for desktop monitors, tablet workstations, and mobile devices with collapsible navigation and touch-optimized controls.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Frontend**: Next.js 16, React 19, Tailwind CSS v4, Lucide React
+* **Backend**: Next.js Server Actions (`@/actions/*`)
+* **Database & ORM**: Prisma ORM v7 with `@prisma/adapter-better-sqlite3` (SQLite local / PostgreSQL ready)
+* **Language**: TypeScript 5 (Strict Mode)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Database Sync
+```bash
+# Push schema to SQLite database
+npx prisma db push
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Generate Prisma Client
+npx prisma generate
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Seed sample materials and admin credentials
+npm run db:seed
+```
 
-## Learn More
+### 3. Start Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Project Directory Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+├── docs/                       # Comprehensive Architecture & System Docs
+│   ├── 01_PROJECT_SUMMARY.md
+│   ├── 02_TECH_STACK.md
+│   ├── 03_SYSTEM_ARCHITECTURE_AND_DESIGN.md
+│   ├── 04_DATABASE_SCHEMA_AND_MODELS.md
+│   └── 05_DEVELOPMENT_ROADMAP.md
+├── prisma/
+│   ├── schema.prisma           # Prisma 7 Database Schema
+│   └── seed.ts                 # Database seed script
+├── src/
+│   ├── actions/                # Next.js Server Actions
+│   │   ├── inventory.ts        # RM & PM CRUD + separate inward logging
+│   │   ├── operations.ts       # Pipeline operations (RM issue, PM issue, etc.)
+│   │   ├── raw-materials.ts    # Raw Material action proxies
+│   │   ├── finished-goods.ts   # Finished Goods and Dispatches
+│   │   ├── packaging.ts        # Packaging materials actions
+│   │   ├── movements.ts        # GRN posting actions
+│   │   ├── auth.ts             # Authentication & session actions
+│   │   ├── roles.ts            # RBAC role & permission actions
+│   │   ├── reports.ts          # Inventory reporting & valuation
+│   │   ├── po-suggestions.ts   # Auto-reorder engine
+│   │   └── csv-import.ts       # Bulk CSV data importer
+│   ├── app/
+│   │   ├── globals.css         # Tailwind CSS styling & custom scrollbars
+│   │   ├── layout.tsx          # Root layout
+│   │   └── page.tsx            # Main tabbed MES dashboard & tables
+│   ├── components/
+│   │   ├── Modals/             # 13 Action & Creation Dialogs
+│   │   │   ├── InwardRawMaterialModal.tsx
+│   │   │   ├── AddRawMaterialModal.tsx
+│   │   │   ├── IssueModal.tsx
+│   │   │   ├── ProductionModal.tsx
+│   │   │   ├── PackagingIssueModal.tsx
+│   │   │   ├── InwardFinishedGoodModal.tsx
+│   │   │   ├── AddFinishedGoodModal.tsx
+│   │   │   ├── DispatchModal.tsx
+│   │   │   ├── InwardPackagingModal.tsx
+│   │   │   ├── AddPackagingModal.tsx
+│   │   │   ├── GRNModal.tsx
+│   │   │   ├── RoleModal.tsx
+│   │   │   └── UserModal.tsx
+│   │   ├── MobileNav.tsx       # Responsive mobile bottom navigation
+│   │   └── Topbar.tsx          # Responsive search, filter & user topbar
+│   └── lib/
+│       └── prisma.ts           # PrismaClient with better-sqlite3 adapter
+```

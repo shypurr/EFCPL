@@ -2,6 +2,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import {
+  resolveStockStatus,
+  sumStockByCode,
+  syncRawMaterialStatusByCode,
+} from '@/lib/inventory-utils';
 
 // ==========================================
 // 1. RAW MATERIALS ACTIONS
@@ -12,11 +17,11 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
     const where: any = {};
     if (search && search.trim() !== '') {
       where.OR = [
-        { code: { contains: search, mode: 'insensitive' } },
-        { name: { contains: search, mode: 'insensitive' } },
-        { brand: { contains: search, mode: 'insensitive' } },
-        { batchNumber: { contains: search, mode: 'insensitive' } },
-        { supplier: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search } },
+        { name: { contains: search } },
+        { brand: { contains: search } },
+        { batchNumber: { contains: search } },
+        { supplier: { contains: search } },
       ];
     }
     if (statusFilter && statusFilter !== 'ALL') {
@@ -25,9 +30,26 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
 
     const items = await prisma.rawMaterial.findMany({
       where,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { createdAt: 'desc' }, // Order by entry time: latest on top
     });
-    return { success: true, data: items };
+
+    // A material's real stock is the sum of all its arrival entries, so totals are
+    // computed over the whole table — never over the (possibly filtered) result set.
+    const allEntries = await prisma.rawMaterial.findMany({
+      select: { code: true, stock: true },
+    });
+    const totalsByCode = sumStockByCode(allEntries);
+
+    const data = items.map((item) => {
+      const materialStock = totalsByCode.get(item.code) ?? item.stock;
+      return {
+        ...item,
+        materialStock,
+        isLowStock: resolveStockStatus(materialStock, item.reorderLevel) === 'Low Stock',
+      };
+    });
+
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error fetching raw materials:', error);
     return { success: false, error: error.message || 'Failed to fetch raw materials' };
@@ -36,8 +58,9 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
 
 export async function getRawMaterialByCode(code: string) {
   try {
-    const item = await prisma.rawMaterial.findUnique({
+    const item = await prisma.rawMaterial.findFirst({
       where: { code: code.trim().toUpperCase() },
+      orderBy: { createdAt: 'desc' },
     });
     if (!item) return { success: false, error: 'Raw Material code not found' };
     return { success: true, data: item };
@@ -64,33 +87,33 @@ export async function createRawMaterial(data: {
 }) {
   try {
     const codeClean = data.code.trim().toUpperCase();
-    const existing = await prisma.rawMaterial.findUnique({ where: { code: codeClean } });
-    if (existing) {
-      return { success: false, error: `Raw Material with code "${codeClean}" already exists.` };
-    }
-
-    let status = data.status || 'Active';
-    if (data.stock <= data.reorderLevel) {
-      status = 'Low Stock';
-    }
+    // Status reflects the material's combined stock across every existing entry.
+    const existingStock = await prisma.rawMaterial.aggregate({
+      where: { code: codeClean },
+      _sum: { stock: true },
+    });
+    const totalStock = (existingStock._sum.stock ?? 0) + Number(data.stock);
+    const status = resolveStockStatus(totalStock, data.reorderLevel);
 
     const newItem = await prisma.rawMaterial.create({
       data: {
         code: codeClean,
         name: data.name.trim(),
-        brand: data.brand?.trim(),
+        brand: data.brand?.trim() || null,
         batchNumber: data.batchNumber?.trim() || `BATCH-${Date.now().toString().slice(-4)}`,
         stock: Number(data.stock),
         unit: data.unit.trim(),
         reorderLevel: Number(data.reorderLevel),
         maxStock: data.maxStock ? Number(data.maxStock) : null,
-        supplier: data.supplier?.trim(),
+        supplier: data.supplier?.trim() || null,
         location: data.location?.trim() || 'RM Store A',
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
         status,
-        remarks: data.remarks?.trim(),
+        remarks: data.remarks?.trim() || null,
       },
     });
+
+    await syncRawMaterialStatusByCode(codeClean);
 
     revalidatePath('/');
     return { success: true, data: newItem };
@@ -100,7 +123,7 @@ export async function createRawMaterial(data: {
   }
 }
 
-// Inward arrival for existing RM (RM tab)
+// Inward arrival for existing RM (RM tab) - Creates a separate entry for each arrival!
 export async function inwardRawMaterial(data: {
   code: string;
   name?: string;
@@ -120,35 +143,45 @@ export async function inwardRawMaterial(data: {
     }
 
     const codeClean = data.code.trim().toUpperCase();
-    const rm = await prisma.rawMaterial.findUnique({
+    const rmTemplate = await prisma.rawMaterial.findFirst({
       where: { code: codeClean },
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (!rm) {
-      return { success: false, error: `Raw Material "${codeClean}" not found. Please add it in Add Materials Hub first.` };
-    }
+    const reorderLevel = rmTemplate ? rmTemplate.reorderLevel : 0;
+    // The arrival adds to the material's existing stock; low-stock is judged on
+    // that combined total, not on this single batch's quantity.
+    const existingStock = await prisma.rawMaterial.aggregate({
+      where: { code: codeClean },
+      _sum: { stock: true },
+    });
+    const totalStock = (existingStock._sum.stock ?? 0) + qty;
+    const status = resolveStockStatus(totalStock, reorderLevel);
 
-    const updatedStock = rm.stock + qty;
-    const newStatus = updatedStock <= rm.reorderLevel ? 'Low Stock' : 'Active';
-
-    const updated = await prisma.rawMaterial.update({
-      where: { id: rm.id },
+    // Log every entry separately
+    const newItem = await prisma.rawMaterial.create({
       data: {
-        name: data.name ? data.name.trim() : rm.name,
-        brand: data.brand ? data.brand.trim() : rm.brand,
+        code: codeClean,
+        name: data.name ? data.name.trim() : (rmTemplate?.name || 'Raw Material'),
+        brand: data.brand ? data.brand.trim() : (rmTemplate?.brand || null),
         batchNumber: data.batchNumber.trim(),
-        stock: updatedStock,
-        unit: data.unit ? data.unit.trim() : rm.unit,
-        supplier: data.supplier ? data.supplier.trim() : rm.supplier,
-        location: data.location ? data.location.trim() : rm.location,
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : rm.expiryDate,
-        status: newStatus,
-        remarks: data.remarks ? data.remarks.trim() : rm.remarks,
+        stock: qty,
+        unit: data.unit ? data.unit.trim() : (rmTemplate?.unit || 'KG'),
+        reorderLevel: reorderLevel,
+        maxStock: rmTemplate?.maxStock || null,
+        supplier: data.supplier ? data.supplier.trim() : (rmTemplate?.supplier || null),
+        location: data.location ? data.location.trim() : (rmTemplate?.location || 'RM Store A'),
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : (rmTemplate?.expiryDate || null),
+        status,
+        remarks: data.remarks ? data.remarks.trim() : null,
       },
     });
 
+    // Older entries of this code still carry the pre-arrival status.
+    await syncRawMaterialStatusByCode(codeClean);
+
     revalidatePath('/');
-    return { success: true, data: updated };
+    return { success: true, data: newItem };
   } catch (error: any) {
     console.error('Error logging inward raw material:', error);
     return { success: false, error: error.message || 'Failed to log inward raw material' };
@@ -184,6 +217,8 @@ export async function updateRawMaterial(
       data: updateData,
     });
 
+    await syncRawMaterialStatusByCode(updated.code);
+
     revalidatePath('/');
     return { success: true, data: updated };
   } catch (error: any) {
@@ -193,7 +228,9 @@ export async function updateRawMaterial(
 
 export async function deleteRawMaterial(id: string) {
   try {
-    await prisma.rawMaterial.delete({ where: { id } });
+    const removed = await prisma.rawMaterial.delete({ where: { id } });
+    // Deleting an arrival reduces the material total; remaining entries may now be low.
+    await syncRawMaterialStatusByCode(removed.code);
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
@@ -210,11 +247,11 @@ export async function getPackagingMaterials(search?: string, statusFilter?: stri
     const where: any = {};
     if (search && search.trim() !== '') {
       where.OR = [
-        { code: { contains: search, mode: 'insensitive' } },
-        { name: { contains: search, mode: 'insensitive' } },
-        { brand: { contains: search, mode: 'insensitive' } },
-        { batchNumber: { contains: search, mode: 'insensitive' } },
-        { supplier: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search } },
+        { name: { contains: search } },
+        { brand: { contains: search } },
+        { batchNumber: { contains: search } },
+        { supplier: { contains: search } },
       ];
     }
     if (statusFilter && statusFilter !== 'ALL') {
@@ -223,7 +260,7 @@ export async function getPackagingMaterials(search?: string, statusFilter?: stri
 
     const items = await prisma.packagingMaterial.findMany({
       where,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
     return { success: true, data: items };
   } catch (error: any) {
@@ -244,14 +281,13 @@ export async function getPackagingMaterialByCode(code: string) {
   }
 }
 
-// Master creation (Add tab)
 export async function createPackagingMaterial(data: {
   code: string;
   name: string;
   brand?: string;
   batchNumber?: string;
   stock: number;
-  unit: string;
+  unit?: string;
   reorderLevel: number;
   maxStock?: number;
   supplier?: string;
@@ -277,9 +313,9 @@ export async function createPackagingMaterial(data: {
         code: codeClean,
         name: data.name.trim(),
         brand: data.brand?.trim(),
-        batchNumber: data.batchNumber?.trim() || `P-BATCH-${Date.now().toString().slice(-4)}`,
+        batchNumber: data.batchNumber?.trim() || `PB-${Date.now().toString().slice(-4)}`,
         stock: Number(data.stock),
-        unit: data.unit.trim(),
+        unit: data.unit?.trim() || 'Units',
         reorderLevel: Number(data.reorderLevel),
         maxStock: data.maxStock ? Number(data.maxStock) : null,
         supplier: data.supplier?.trim(),
@@ -298,7 +334,6 @@ export async function createPackagingMaterial(data: {
   }
 }
 
-// Inward arrival for existing PM (PM tab)
 export async function inwardPackagingMaterial(data: {
   code: string;
   name?: string;
@@ -323,7 +358,7 @@ export async function inwardPackagingMaterial(data: {
     });
 
     if (!pm) {
-      return { success: false, error: `Packaging Material "${codeClean}" not found. Please add it in Add Materials Hub first.` };
+      return { success: false, error: `Packaging Material "${codeClean}" not found.` };
     }
 
     const updatedStock = pm.stock + qty;
