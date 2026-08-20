@@ -153,8 +153,50 @@ async function main() {
   });
 
   // 4. SAMPLE SEED DATA FOR INVENTORY & OPERATIONS
-  console.log('📦 Seeding sample Raw Materials...');
-  const rm1 = await prisma.rawMaterial.findFirst({ where: { code: 'RM001' } });
+  console.log('📦 Seeding sample Raw Materials Master & Arrivals...');
+  // Master definitions
+  const masterRm1 = await prisma.rawMaterial.findFirst({ where: { code: 'RM001', isMaster: true } });
+  if (!masterRm1) {
+    await prisma.rawMaterial.create({
+      data: {
+        code: 'RM001',
+        name: 'Refined Sugar (Grade A)',
+        brand: 'Madhur Pure',
+        batchNumber: '',
+        stock: 0,
+        unit: 'KG',
+        reorderLevel: 1000,
+        maxStock: 10000,
+        supplier: 'Sahakar Sugar Mills',
+        location: 'Cold Room Zone A',
+        isMaster: true,
+        status: 'Active',
+      },
+    });
+  }
+
+  const masterRm2 = await prisma.rawMaterial.findFirst({ where: { code: 'RM002', isMaster: true } });
+  if (!masterRm2) {
+    await prisma.rawMaterial.create({
+      data: {
+        code: 'RM002',
+        name: 'Mango Pulp Puree',
+        brand: 'Alphonso Premium',
+        batchNumber: '',
+        stock: 0,
+        unit: 'LTR',
+        reorderLevel: 500,
+        maxStock: 5000,
+        supplier: 'Konkan Agro Tech',
+        location: 'Deep Freeze -18°C',
+        isMaster: true,
+        status: 'Active',
+      },
+    });
+  }
+
+  // Sample Logged Arrivals
+  const rm1 = await prisma.rawMaterial.findFirst({ where: { code: 'RM001', isMaster: false } });
   if (!rm1) {
     await prisma.rawMaterial.create({
       data: {
@@ -170,11 +212,12 @@ async function main() {
         location: 'Cold Room Zone A',
         expiryDate: new Date('2027-08-30'),
         status: 'Active',
+        isMaster: false,
       },
     });
   }
 
-  const rm2 = await prisma.rawMaterial.findFirst({ where: { code: 'RM002' } });
+  const rm2 = await prisma.rawMaterial.findFirst({ where: { code: 'RM002', isMaster: false } });
   if (!rm2) {
     await prisma.rawMaterial.create({
       data: {
@@ -190,6 +233,7 @@ async function main() {
         location: 'Deep Freeze -18°C',
         expiryDate: new Date('2026-12-15'),
         status: 'Active',
+        isMaster: false,
       },
     });
   }

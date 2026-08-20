@@ -40,7 +40,6 @@ export default function GRNModal({
     batchNo: '',
     coaStatus: 'Approved',
     enteredBy: 'Store Manager',
-    remarks: '',
   });
 
   if (!isOpen) return null;
@@ -85,7 +84,6 @@ export default function GRNModal({
       unit: formData.unit || 'KG',
       mfgDate: mfg,
       expiryDate: exp,
-      remarks: formData.remarks,
       operator: formData.enteredBy,
     });
     setLoading(false);
@@ -229,16 +227,6 @@ export default function GRNModal({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="min-w-0">
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
-            <input
-              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] outline-none transition-all"
-              placeholder="Vehicle number, inspection notes..."
-              value={formData.remarks}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            />
           </div>
 
           <div className="pt-3 border-t border-[#1E2F4A] flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">

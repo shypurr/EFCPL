@@ -122,7 +122,7 @@ export async function createRMIssue(data: {
           expiryDate: data.expiryDate ? new Date(data.expiryDate) : rm.expiryDate,
           quantityInBatch: rm.stock,
           issuedStock: issuedQty,
-          remarks: data.remarks?.trim(),
+          remarks: null,
           issuedBy: data.issuedBy || 'Store Manager',
         },
       });
@@ -207,7 +207,7 @@ export async function createProductionLog(data: {
           wastage: data.wastage ? Number(data.wastage) : 0,
           mfgDate: mfg,
           expiryDate: exp,
-          remarks: data.remarks?.trim(),
+          remarks: null,
           operator: data.operator || 'Production Supervisor',
         },
       });
@@ -364,7 +364,7 @@ export async function createPackagingIssue(data: {
           issueFor: data.issueFor.trim(),
           quantityInBatch: pm.stock,
           issuedQty,
-          remarks: data.remarks?.trim(),
+          remarks: null,
           issuedBy: data.issuedBy || 'Store Manager',
         },
       });
@@ -648,7 +648,7 @@ export async function createDispatch(data: {
           expiryDate: data.expiryDate ? new Date(data.expiryDate) : fg.expiryDate,
           location: data.location || fg.location,
           coaStatus: data.coaStatus || 'Approved',
-          remarks: data.remarks?.trim(),
+          remarks: null,
           dispatchedBy: data.dispatchedBy || 'Dispatch Officer',
         },
       });

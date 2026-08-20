@@ -36,20 +36,16 @@ export default function AddRawMaterialModal({
     code: '',
     name: '',
     brand: '',
-    stock: '',
     unit: 'KG',
     reorderLevel: '',
     maxStock: '',
     supplier: '',
-    batchNumber: '',
     location: 'RM Store A',
-    expiryDate: '',
-    remarks: '',
   });
 
   if (!isOpen) return null;
 
-  const handleNumberChange = (field: 'stock' | 'reorderLevel' | 'maxStock', val: string) => {
+  const handleNumberChange = (field: 'reorderLevel' | 'maxStock', val: string) => {
     if (val === '') {
       setFormData((prev) => ({ ...prev, [field]: '' }));
       return;
@@ -61,46 +57,37 @@ export default function AddRawMaterialModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const stockNum = Number(formData.stock);
     const reorderNum = Number(formData.reorderLevel);
 
-    if (!formData.code || !formData.name || formData.stock === '' || stockNum < 0 || formData.reorderLevel === '' || reorderNum < 0) {
-      alert('Please fill in required fields with valid non-negative numbers (Code, Name, Stock, Reorder Level)');
+    if (!formData.code.trim() || !formData.name.trim() || formData.reorderLevel === '' || reorderNum < 0) {
+      alert('Please fill in required fields (Code, Material Name, Reorder Level with non-negative number)');
       return;
     }
 
     setLoading(true);
     const res = await createRawMaterial({
-      code: formData.code,
-      name: formData.name,
-      brand: formData.brand,
-      batchNumber: formData.batchNumber || `BATCH-${Date.now().toString().slice(-4)}`,
-      stock: stockNum,
+      code: formData.code.trim(),
+      name: formData.name.trim(),
+      brand: formData.brand.trim() || undefined,
       unit: formData.unit || 'KG',
       reorderLevel: reorderNum,
       maxStock: formData.maxStock ? Number(formData.maxStock) : undefined,
-      supplier: formData.supplier,
-      location: formData.location,
-      expiryDate: formData.expiryDate || undefined,
-      remarks: formData.remarks,
+      supplier: formData.supplier.trim() || undefined,
+      location: formData.location.trim() || undefined,
     });
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ New Raw Material "${formData.name}" added to catalog successfully!`);
+      alert(`✅ New Raw Material Master "${formData.name}" registered in the system successfully!`);
       setFormData({
         code: '',
         name: '',
         brand: '',
-        stock: '',
         unit: 'KG',
         reorderLevel: '',
         maxStock: '',
         supplier: '',
-        batchNumber: '',
         location: 'RM Store A',
-        expiryDate: '',
-        remarks: '',
       });
       onSuccess();
       onClose();
@@ -120,10 +107,10 @@ export default function AddRawMaterialModal({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
-                Add Brand New Raw Material (Catalog Item)
+                Add Brand New Raw Material (Master Item)
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                Define a new raw material master record in the system
+                Register a new raw material catalog SKU in the system (without logging batch stock)
               </p>
             </div>
           </div>
@@ -142,7 +129,7 @@ export default function AddRawMaterialModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Code *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono transition-all"
-                placeholder="RM009"
+                placeholder="e.g. RM009"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 required
@@ -152,7 +139,7 @@ export default function AddRawMaterialModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Material Name *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="Coriander Powder"
+                placeholder="e.g. Coriander Powder"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
@@ -162,27 +149,14 @@ export default function AddRawMaterialModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="Everest / MDH"
+                placeholder="e.g. Everest / MDH"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Current Stock Qty *</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all font-bold text-emerald-400"
-                placeholder="100"
-                value={formData.stock}
-                onChange={(e) => handleNumberChange('stock', e.target.value)}
-                required
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
               <select
@@ -197,22 +171,19 @@ export default function AddRawMaterialModal({
                 ))}
               </select>
             </div>
-            <div className="min-w-0 sm:col-span-2 md:col-span-1">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Reorder Level *</label>
               <input
                 type="number"
                 min="0"
                 step="any"
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="50"
+                placeholder="e.g. 50"
                 value={formData.reorderLevel}
                 onChange={(e) => handleNumberChange('reorderLevel', e.target.value)}
                 required
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Max Stock Level</label>
               <input
@@ -220,34 +191,25 @@ export default function AddRawMaterialModal({
                 min="0"
                 step="any"
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="500"
+                placeholder="e.g. 500"
                 value={formData.maxStock}
                 onChange={(e) => handleNumberChange('maxStock', e.target.value)}
-              />
-            </div>
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="ABC Agro Pune"
-                value={formData.supplier}
-                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-              />
-            </div>
-            <div className="min-w-0 sm:col-span-2 md:col-span-1">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono transition-all"
-                placeholder="B2025-999"
-                value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Default Supplier Name</label>
+              <input
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
+                placeholder="e.g. ABC Agro Pune"
+                value={formData.supplier}
+                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Default Storage Location</label>
               <select
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
                 value={formData.location}
@@ -260,25 +222,6 @@ export default function AddRawMaterialModal({
                 ))}
               </select>
             </div>
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
-              <input
-                type="date"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
-            <input
-              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-              placeholder="Optional notes or specifications..."
-              value={formData.remarks}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            />
           </div>
 
           {/* Action Buttons */}
@@ -298,10 +241,10 @@ export default function AddRawMaterialModal({
               {loading ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Creating...</span>
+                  <span>Registering...</span>
                 </>
               ) : (
-                'Create Master Material'
+                'Register Master Material'
               )}
             </button>
           </div>

@@ -48,7 +48,7 @@ model RawMaterial {
   code         String    // e.g. RM001 (allows multiple arrival entries for the same material code)
   name         String
   brand        String?
-  batchNumber  String
+  batchNumber  String    @default("")
   stock        Float     @default(0)
   unit         String    // e.g. KG, LTR, Units, Boxes
   reorderLevel Float     @default(0)
@@ -57,6 +57,7 @@ model RawMaterial {
   location     String?
   expiryDate   DateTime?
   status       String    @default("Active") // Active, Low Stock, Expired
+  isMaster     Boolean   @default(false)
   attributes   Json?
   remarks      String?
   createdAt    DateTime  @default(now())

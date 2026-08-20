@@ -24,7 +24,6 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
     location: '',
     coaStatus: 'Approved',
     dispatchedBy: 'Dispatch Officer',
-    remarks: '',
   });
 
   if (!isOpen) return null;
@@ -85,7 +84,6 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
       expiryDate: selectedFg ? selectedFg.expiryDate : new Date(),
       location: formData.location || (selectedFg ? selectedFg.location : 'FG Store A'),
       coaStatus: formData.coaStatus,
-      remarks: formData.remarks,
       dispatchedBy: formData.dispatchedBy,
     });
     setLoading(false);
@@ -103,7 +101,6 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
         location: '',
         coaStatus: 'Approved',
         dispatchedBy: 'Dispatch Officer',
-        remarks: '',
       });
       onSuccess();
       onClose();
@@ -271,28 +268,14 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Dispatched By */}
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Dispatched By</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="Officer name"
-                value={formData.dispatchedBy}
-                onChange={(e) => setFormData({ ...formData, dispatchedBy: e.target.value })}
-              />
-            </div>
-
-            {/* Remarks */}
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="Vehicle number, LR tracking..."
-                value={formData.remarks}
-                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              />
-            </div>
+          <div className="min-w-0">
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Dispatched By</label>
+            <input
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              placeholder="Officer name"
+              value={formData.dispatchedBy}
+              onChange={(e) => setFormData({ ...formData, dispatchedBy: e.target.value })}
+            />
           </div>
 
           {/* Action Buttons */}

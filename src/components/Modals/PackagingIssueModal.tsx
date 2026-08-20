@@ -26,7 +26,6 @@ export default function PackagingIssueModal({
     issueFor: '',
     issuedQty: '',
     unit: 'Units',
-    remarks: '',
     issuedBy: 'Store Manager',
   });
 
@@ -79,7 +78,6 @@ export default function PackagingIssueModal({
       issueFor: formData.issueFor,
       quantityInBatch: selectedPm ? selectedPm.stock : 100,
       issuedQty: qtyNum,
-      remarks: formData.remarks,
       issuedBy: formData.issuedBy,
     });
     setLoading(false);
@@ -92,7 +90,6 @@ export default function PackagingIssueModal({
         issueFor: '',
         issuedQty: '',
         unit: 'Units',
-        remarks: '',
         issuedBy: 'Store Manager',
       });
       onSuccess();
@@ -217,25 +214,14 @@ export default function PackagingIssueModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Issued By</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                placeholder="Store Manager"
-                value={formData.issuedBy}
-                onChange={(e) => setFormData({ ...formData, issuedBy: e.target.value })}
-              />
-            </div>
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                placeholder="Production line number..."
-                value={formData.remarks}
-                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              />
-            </div>
+          <div className="min-w-0">
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Issued By</label>
+            <input
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+              placeholder="Store Manager"
+              value={formData.issuedBy}
+              onChange={(e) => setFormData({ ...formData, issuedBy: e.target.value })}
+            />
           </div>
 
           {/* Action Buttons */}

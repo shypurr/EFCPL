@@ -14,14 +14,19 @@ import {
 
 export async function getRawMaterials(search?: string, statusFilter?: string) {
   try {
-    const where: any = {};
+    const where: any = { isMaster: false };
     if (search && search.trim() !== '') {
-      where.OR = [
-        { code: { contains: search } },
-        { name: { contains: search } },
-        { brand: { contains: search } },
-        { batchNumber: { contains: search } },
-        { supplier: { contains: search } },
+      where.AND = [
+        { isMaster: false },
+        {
+          OR: [
+            { code: { contains: search } },
+            { name: { contains: search } },
+            { brand: { contains: search } },
+            { batchNumber: { contains: search } },
+            { supplier: { contains: search } },
+          ],
+        },
       ];
     }
     if (statusFilter && statusFilter !== 'ALL') {
@@ -33,9 +38,9 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
       orderBy: { createdAt: 'desc' }, // Order by entry time: latest on top
     });
 
-    // A material's real stock is the sum of all its arrival entries, so totals are
-    // computed over the whole table — never over the (possibly filtered) result set.
+    // A material's real stock is the sum of all its arrival entries
     const allEntries = await prisma.rawMaterial.findMany({
+      where: { isMaster: false },
       select: { code: true, stock: true },
     });
     const totalsByCode = sumStockByCode(allEntries);
@@ -56,11 +61,31 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
   }
 }
 
+export async function getRawMaterialMasters() {
+  try {
+    const materials = await prisma.rawMaterial.findMany({
+      orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    // Deduplicate by code, prioritizing the master record if defined
+    const map = new Map<string, any>();
+    for (const m of materials) {
+      if (!map.has(m.code) || m.isMaster) {
+        map.set(m.code, m);
+      }
+    }
+
+    return { success: true, data: Array.from(map.values()) };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to fetch raw material masters' };
+  }
+}
+
 export async function getRawMaterialByCode(code: string) {
   try {
     const item = await prisma.rawMaterial.findFirst({
       where: { code: code.trim().toUpperCase() },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }],
     });
     if (!item) return { success: false, error: 'Raw Material code not found' };
     return { success: true, data: item };
@@ -69,61 +94,58 @@ export async function getRawMaterialByCode(code: string) {
   }
 }
 
-// Master creation (Add tab)
+// Master creation (Add tab) - Registers material SKU in catalog without logging fake stock/batch arrival
 export async function createRawMaterial(data: {
   code: string;
   name: string;
   brand?: string;
-  batchNumber?: string;
-  stock: number;
   unit: string;
   reorderLevel: number;
   maxStock?: number;
   supplier?: string;
   location?: string;
+  stock?: number;
+  batchNumber?: string;
   expiryDate?: string | Date;
-  status?: string;
-  remarks?: string;
 }) {
   try {
     const codeClean = data.code.trim().toUpperCase();
-    // Status reflects the material's combined stock across every existing entry.
-    const existingStock = await prisma.rawMaterial.aggregate({
-      where: { code: codeClean },
-      _sum: { stock: true },
+
+    const existingMaster = await prisma.rawMaterial.findFirst({
+      where: { code: codeClean, isMaster: true },
     });
-    const totalStock = (existingStock._sum.stock ?? 0) + Number(data.stock);
-    const status = resolveStockStatus(totalStock, data.reorderLevel);
+    if (existingMaster) {
+      return { success: false, error: `Raw Material Master with code "${codeClean}" already exists.` };
+    }
 
     const newItem = await prisma.rawMaterial.create({
       data: {
         code: codeClean,
         name: data.name.trim(),
         brand: data.brand?.trim() || null,
-        batchNumber: data.batchNumber?.trim() || `BATCH-${Date.now().toString().slice(-4)}`,
-        stock: Number(data.stock),
+        batchNumber: '',
+        stock: 0,
         unit: data.unit.trim(),
-        reorderLevel: Number(data.reorderLevel),
+        reorderLevel: Number(data.reorderLevel) || 0,
         maxStock: data.maxStock ? Number(data.maxStock) : null,
         supplier: data.supplier?.trim() || null,
         location: data.location?.trim() || 'RM Store A',
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-        status,
-        remarks: data.remarks?.trim() || null,
+        expiryDate: null,
+        status: 'Active',
+        isMaster: true,
+        remarks: null,
       },
     });
-
-    await syncRawMaterialStatusByCode(codeClean);
 
     revalidatePath('/');
     return { success: true, data: newItem };
   } catch (error: any) {
-    console.error('Error creating raw material:', error);
-    return { success: false, error: error.message || 'Failed to create raw material' };
+    console.error('Error creating raw material master:', error);
+    return { success: false, error: error.message || 'Failed to create raw material master' };
   }
 }
 
-// Inward arrival for existing RM (RM tab) - Creates a separate entry for each arrival!
+// Inward arrival for existing RM (RM tab) - Creates a separate logged arrival entry for each arrived batch!
 export async function inwardRawMaterial(data: {
   code: string;
   name?: string;
@@ -134,7 +156,6 @@ export async function inwardRawMaterial(data: {
   supplier?: string;
   location?: string;
   expiryDate?: string | Date;
-  remarks?: string;
 }) {
   try {
     const qty = Number(data.inwardQty);
@@ -145,20 +166,18 @@ export async function inwardRawMaterial(data: {
     const codeClean = data.code.trim().toUpperCase();
     const rmTemplate = await prisma.rawMaterial.findFirst({
       where: { code: codeClean },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }],
     });
 
     const reorderLevel = rmTemplate ? rmTemplate.reorderLevel : 0;
-    // The arrival adds to the material's existing stock; low-stock is judged on
-    // that combined total, not on this single batch's quantity.
     const existingStock = await prisma.rawMaterial.aggregate({
-      where: { code: codeClean },
+      where: { code: codeClean, isMaster: false },
       _sum: { stock: true },
     });
     const totalStock = (existingStock._sum.stock ?? 0) + qty;
     const status = resolveStockStatus(totalStock, reorderLevel);
 
-    // Log every entry separately
+    // Log the actual arrival entry into inventory
     const newItem = await prisma.rawMaterial.create({
       data: {
         code: codeClean,
@@ -173,11 +192,11 @@ export async function inwardRawMaterial(data: {
         location: data.location ? data.location.trim() : (rmTemplate?.location || 'RM Store A'),
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : (rmTemplate?.expiryDate || null),
         status,
-        remarks: data.remarks ? data.remarks.trim() : null,
+        isMaster: false,
+        remarks: null,
       },
     });
 
-    // Older entries of this code still carry the pre-arrival status.
     await syncRawMaterialStatusByCode(codeClean);
 
     revalidatePath('/');
@@ -202,7 +221,6 @@ export async function updateRawMaterial(
     location: string;
     expiryDate: string | Date;
     status: string;
-    remarks: string;
   }>
 ) {
   try {
@@ -229,7 +247,6 @@ export async function updateRawMaterial(
 export async function deleteRawMaterial(id: string) {
   try {
     const removed = await prisma.rawMaterial.delete({ where: { id } });
-    // Deleting an arrival reduces the material total; remaining entries may now be low.
     await syncRawMaterialStatusByCode(removed.code);
     revalidatePath('/');
     return { success: true };
@@ -294,7 +311,6 @@ export async function createPackagingMaterial(data: {
   location?: string;
   expiryDate?: string | Date;
   status?: string;
-  remarks?: string;
 }) {
   try {
     const codeClean = data.code.trim().toUpperCase();
@@ -322,7 +338,7 @@ export async function createPackagingMaterial(data: {
         location: data.location?.trim() || 'PM Warehouse',
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
         status,
-        remarks: data.remarks?.trim(),
+        remarks: null,
       },
     });
 
@@ -344,7 +360,6 @@ export async function inwardPackagingMaterial(data: {
   supplier?: string;
   location?: string;
   expiryDate?: string | Date;
-  remarks?: string;
 }) {
   try {
     const qty = Number(data.inwardQty);
@@ -376,7 +391,7 @@ export async function inwardPackagingMaterial(data: {
         location: data.location ? data.location.trim() : pm.location,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : pm.expiryDate,
         status: newStatus,
-        remarks: data.remarks ? data.remarks.trim() : pm.remarks,
+        remarks: null,
       },
     });
 
@@ -402,7 +417,6 @@ export async function updatePackagingMaterial(
     location: string;
     expiryDate: string | Date;
     status: string;
-    remarks: string;
   }>
 ) {
   try {

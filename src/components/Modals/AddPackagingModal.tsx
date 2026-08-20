@@ -41,7 +41,6 @@ export default function AddPackagingModal({
     batchNumber: '',
     location: 'PM Warehouse',
     expiryDate: '',
-    remarks: '',
   });
 
   if (!isOpen) return null;
@@ -79,7 +78,6 @@ export default function AddPackagingModal({
       supplier: formData.supplier,
       location: formData.location,
       expiryDate: formData.expiryDate || undefined,
-      remarks: formData.remarks,
     });
     setLoading(false);
 
@@ -97,7 +95,6 @@ export default function AddPackagingModal({
         batchNumber: '',
         location: 'PM Warehouse',
         expiryDate: '',
-        remarks: '',
       });
       onSuccess();
       onClose();
@@ -266,16 +263,6 @@ export default function AddPackagingModal({
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
               />
             </div>
-          </div>
-
-          <div className="min-w-0">
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
-            <input
-              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              placeholder="Optional notes or specifications..."
-              value={formData.remarks}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-            />
           </div>
 
           {/* Action Buttons */}

@@ -6,7 +6,7 @@ import MobileNav from '@/components/MobileNav';
 import Topbar from '@/components/Topbar';
 
 // Actions
-import { getRawMaterials, deleteRawMaterial } from '@/actions/inventory';
+import { getRawMaterials, getRawMaterialMasters, deleteRawMaterial } from '@/actions/inventory';
 import { getPackagingMaterials, deletePackagingMaterial } from '@/actions/inventory';
 import {
   getRMIssues,
@@ -77,6 +77,7 @@ export default function Home() {
 
   // Data States
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
+  const [rawMaterialMasters, setRawMaterialMasters] = useState<any[]>([]);
   const [packagedMaterials, setPackagedMaterials] = useState<any[]>([]);
   const [rmIssues, setRmIssues] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
@@ -120,6 +121,7 @@ export default function Home() {
         rolesRes,
         permsRes,
         rmRes,
+        rmMastersRes,
         pmRes,
         rmIssueRes,
         prodRes,
@@ -134,6 +136,7 @@ export default function Home() {
         getRoles(),
         getPermissions(),
         getRawMaterials(searchQuery),
+        getRawMaterialMasters(),
         getPackagingMaterials(searchQuery),
         getRMIssues(searchQuery),
         getProductionLogs(searchQuery),
@@ -149,6 +152,7 @@ export default function Home() {
       if (rolesRes?.success && rolesRes.data) setRolesList(rolesRes.data);
       if (permsRes?.success && permsRes.data) setPermissionsList(permsRes.data);
       if (rmRes?.success && rmRes.data) setRawMaterials(rmRes.data);
+      if (rmMastersRes?.success && rmMastersRes.data) setRawMaterialMasters(rmMastersRes.data);
       if (pmRes?.success && pmRes.data) setPackagedMaterials(pmRes.data);
       if (rmIssueRes?.success && rmIssueRes.data) setRmIssues(rmIssueRes.data);
       if (prodRes?.success && prodRes.data) setProductionLogs(prodRes.data);
@@ -1572,7 +1576,7 @@ export default function Home() {
       <InwardRawMaterialModal
         isOpen={modalInwardRm}
         onClose={() => setModalInwardRm(false)}
-        rawMaterials={rawMaterials}
+        rawMaterials={rawMaterialMasters.length > 0 ? rawMaterialMasters : rawMaterials}
         onSuccess={loadData}
       />
 
