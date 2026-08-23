@@ -22,6 +22,10 @@ export async function deleteFinishedGood(id: string) {
   return ops.deleteFinishedGood(id);
 }
 
+export async function archiveFinishedGood(id: string) {
+  return ops.archiveFinishedGood(id);
+}
+
 export async function postDispatch(data: Parameters<typeof ops.createDispatch>[0]) {
   return ops.createDispatch(data);
 }

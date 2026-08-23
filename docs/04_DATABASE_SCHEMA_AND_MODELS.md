@@ -1,5 +1,7 @@
 # 04. Database Schema & Data Models — EFCPL MES & Inventory System
 
+> **Engine**: PostgreSQL (Neon) — `datasource db { provider = "postgresql" }` in `prisma/schema.prisma`.
+
 ## 1. Relational Schema Architecture
 
 ```
@@ -11,7 +13,7 @@
 | name              |      | name               |      | name                  |
 | brand             |      | brand              |      | batchNumber           |
 | batchNumber       |      | batchNumber        |      | quantityProduced      |
-| stock             |      | stock              |      | totalStock            |
+| stock (per batch) |      | stock (aggregated) |      | totalStock            |
 | unit (KG/Units/Bx)|      | unit               |      | unit                  |
 | reorderLevel      |      | reorderLevel       |      | mfgDate               |
 | maxStock          |      | maxStock           |      | expiryDate            |
@@ -19,10 +21,11 @@
 | location          |      | location           |      | location              |
 | expiryDate        |      | expiryDate         |      | status                |
 | status            |      | status             |      | createdAt / updatedAt |
-| createdAt (desc)  |      | createdAt/updatedAt|      +-----------------------+
-| updatedAt         |      +--------------------+                  |
-+-------------------+                 |                            |
-          |                           v                            v
+| isMaster (bool)   |      | attributes / rmks  |      +-----------------------+
+| attributes / rmks |      | createdAt/updatedAt|                  |
+| createdAt (desc)  |      +--------------------+                  |
+| updatedAt         |                |                            |
++-------------------+                v                            v
           |                 +--------------------+     +-----------------------+
           |                 |   PackagingIssue   |     |       Dispatch        |
           v                 +--------------------+     +-----------------------+
@@ -39,7 +42,25 @@
 | issuedDate        |                                  +-----------------------+
 | issuedBy / remarks|
 +-------------------+
+
++--------------------+      +--------------------+
+|    SystemLookup    |      |  StorageLocation   |   (Configuration tables —
++--------------------+      +--------------------+    no FK relations; joined
+| id (PK)            |      | id (PK)            |    by string value)
+| group (UNIT/BRAND/ |      | name (Unique)      |
+|  COA_STATUS/LOC.)  |      | zone               |
+| code               |      | tempSpec           |
+| label              |      | description        |
+| sortOrder/isActive |      | isActive           |
+| metadata (Json)    |      | createdAt/updatedAt|
+| @@unique(group,code)|     +--------------------+
++--------------------+
 ```
+
+> **Note on `remarks`**: the column is retained on `RawMaterial`, `PackagingMaterial`, `RMIssue`,
+> `ProductionLog`, `PackagingIssue` and `Dispatch`, but no entry modal collects it any more.
+> Several server actions still accept an optional `remarks` argument in their signature, yet every
+> write path persists `remarks: null`. Treat the field as reserved/unused. See §3.
 
 ---
 
@@ -48,23 +69,33 @@
 ### A. Inventory Section
 
 #### 1. `RawMaterial`
-Stores incoming and on-hand raw material lots. Supports discrete arrivals for identical material codes:
+One table, **two kinds of row**, distinguished by the `isMaster` flag:
+
+| Row kind | `isMaster` | Created by | Meaning |
+| :--- | :--- | :--- | :--- |
+| **Master SKU** | `true` | `createRawMaterial` (*+ Add Raw Material*) | Catalog definition only. `stock: 0`, `batchNumber: ''`, `expiryDate: null`. Never shown in the RM inventory table. |
+| **Arrival batch** | `false` | `inwardRawMaterial` (*Log Incoming RM*) | A physical shipment that actually arrived. One row per arrival; rows are never merged. |
+
+Fields:
 - `id`: Unique identifier (`cuid`).
-- `code`: Item catalog code (e.g. `RM001`, `RM002`). Indexed for fast lookup.
+- `code`: Item catalog code (e.g. `RM001`, `RM002`). **Not unique** — one code owns one master row plus many arrival rows. Indexed for fast lookup.
 - `name`: Material description (e.g. *Refined Sugar Grade A*).
 - `brand`: Brand / Origin.
-- `batchNumber`: Vendor or internal arrival lot number.
-- `stock`: Current quantity available in this specific batch.
-- `unit`: Unit of measurement (`KG`, `Units`, `Boxes`).
-- `reorderLevel` & `maxStock`: Safety threshold levels.
+- `batchNumber`: Vendor or internal arrival lot number (empty string on master rows).
+- `stock`: Quantity of **this single batch** — never the material's total. See §D.
+- `unit`: Unit of measurement (`KG`, `Units`, `Boxes`, `GM`, `LTR`, `ML`, `BAGS`).
+- `reorderLevel` & `maxStock`: Safety threshold levels (material-level settings, copied onto each arrival row from the master template).
 - `supplier` & `location`: Vendor and warehouse storage location.
 - `expiryDate`: Lot expiration timestamp.
-- `status`: Calculated operational state (`Active` / `Low Stock`).
+- `status`: Material-level operational state (`Active` / `Low Stock`), written identically to every row of a code by `syncRawMaterialStatusByCode`.
+- `isMaster`: Catalog-definition marker (see table above).
+- `attributes`: Optional `Json` bag for extra material properties.
 - `createdAt`: Arrival logging timestamp (used for default `desc` sorting).
 
 #### 2. `PackagingMaterial`
 Master packaging inventory (Bottles, Cartons, Caps, Pouches, Labels).
-- Fields: `id`, `code` (Unique), `name`, `brand`, `batchNumber`, `stock`, `unit`, `reorderLevel`, `maxStock`, `supplier`, `location`, `expiryDate`, `status`, `createdAt`, `updatedAt`.
+- Fields: `id`, `code` (**Unique**), `name`, `brand`, `batchNumber`, `stock`, `unit`, `reorderLevel`, `maxStock`, `supplier`, `location`, `expiryDate`, `status`, `attributes`, `remarks`, `createdAt`, `updatedAt`.
+- **Contrast with `RawMaterial`**: PM uses the *aggregated* model — `code` is unique, one row per material, and `inwardPackagingMaterial` **increments** `stock` on the existing row and overwrites `batchNumber` with the latest arrival lot. There is no `isMaster` flag and no per-arrival history for PM.
 
 ---
 
@@ -72,11 +103,12 @@ Master packaging inventory (Bottles, Cartons, Caps, Pouches, Labels).
 
 #### 1. `RMIssue`
 Records raw material deductions issued to production batches:
-- `rmCode`, `materialName`, `batchNumber`: Linked material lot.
+- `rmCode`, `materialName`, `batchNumber`: Linked material lot (`rmCode` is a plain indexed string, **not** a foreign key — RM codes are non-unique).
 - `issueFor`: Target Finished Good (selected from active FG catalog).
-- `quantityInBatch`: Batch balance prior to issuance.
+- `quantityInBatch`: Batch balance **prior to** issuance (snapshot of the source row's `stock`).
 - `issuedStock`: Quantity deducted (strictly positive).
-- `issuedDate`, `issuedBy`, `remarks`.
+- `expiryDate`: Copied from the source batch for traceability.
+- `issuedDate`, `issuedBy`, `remarks` (unused).
 
 #### 2. `ProductionLog`
 Records completed production processing cycles:
@@ -108,3 +140,36 @@ Finished product customer shipments:
 - **`RolePermission`**: Junction table mapping roles to permissions.
 - **`User`**: Username, name, hashed password, role assignment, active flag.
 - **`AuditLog`**: Mutation logging with user ID, action, entity, entity ID, JSON details, and timestamp.
+
+---
+
+### D. Configuration Models
+- **`SystemLookup`**: Generic key/label dictionary grouped by `group` (`UNIT`, `COA_STATUS`, `LOCATION`, `BRAND`), with `sortOrder`, `isActive` and a `metadata` JSON bag. Unique on `(group, code)`. Managed through `src/actions/lookups.ts` and the `AddLookupModal`.
+- **`StorageLocation`**: Named warehouse/cold-room locations with `zone`, `tempSpec`, `description`, `isActive`. Referenced by materials as a **plain string** (`location`), not a foreign key.
+
+---
+
+## 3. The Raw Material Stock Model (Critical)
+
+`RawMaterial.stock` is a **batch quantity**, not a material quantity. Every read that answers
+"how much of `RM001` do we have?" must aggregate across rows. The rules live in
+[`src/lib/inventory-utils.ts`](../src/lib/inventory-utils.ts):
+
+| Helper | Responsibility |
+| :--- | :--- |
+| `sumStockByCode(rows)` | In-memory aggregation of `stock` per `code` — used to attach `materialStock` to each row returned by `getRawMaterials`. |
+| `resolveStockStatus(total, reorderLevel)` | Single source of truth for the low-stock rule: `total <= reorderLevel → 'Low Stock'`, else `'Active'`. |
+| `getRawMaterialTotalStock(code)` | DB-side `aggregate({ _sum: { stock } })` for one code. Always queries the full table so an active search filter cannot skew the total. |
+| `syncRawMaterialStatusByCode(code)` | Recomputes the material-level total and writes the resulting `status` to **every** row of that code, so a stored `status` can never contradict the total. Uses `Math.max()` of all rows' `reorderLevel` so a legacy row left at `0` cannot mask a genuine low-stock condition. Call after any mutation that changes stock for a code. |
+
+**Derived fields** returned by `getRawMaterials` (computed, not columns):
+- `materialStock`: total stock across every arrival row sharing the row's `code`.
+- `isLowStock`: `resolveStockStatus(materialStock, reorderLevel) === 'Low Stock'`.
+
+**Query surface** (`src/actions/inventory.ts`, proxied by `src/actions/raw-materials.ts`):
+
+| Action | Row filter | Used by |
+| :--- | :--- | :--- |
+| `getRawMaterials(search, status)` | `isMaster: false` | RM inventory table (arrivals only, `createdAt desc`) |
+| `getRawMaterialMasters()` | all rows, deduplicated by `code` preferring `isMaster: true` | RM code dropdowns (Inward RM modal) |
+| `getRawMaterialByCode(code)` | `orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }]` | Single-material lookup, prefers the master definition |

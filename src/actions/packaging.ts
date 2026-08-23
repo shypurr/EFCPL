@@ -25,3 +25,7 @@ export async function inwardPackagingMaterial(data: Parameters<typeof inventory.
 export async function deletePackagingMaterial(id: string) {
   return inventory.deletePackagingMaterial(id);
 }
+
+export async function archivePackagingMaterial(id: string) {
+  return inventory.archivePackagingMaterial(id);
+}

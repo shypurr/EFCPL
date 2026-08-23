@@ -6,8 +6,12 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
   return inventory.getRawMaterials(search, statusFilter);
 }
 
-export async function getRawMaterialMasters() {
-  return inventory.getRawMaterialMasters();
+export async function getRawMaterialMasters(search?: string) {
+  return inventory.getRawMaterialMasters(search);
+}
+
+export async function archiveRawMaterialByCode(code: string) {
+  return inventory.archiveRawMaterialByCode(code);
 }
 
 export async function getRawMaterialByCode(code: string) {

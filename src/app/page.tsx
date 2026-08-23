@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 import Topbar from '@/components/Topbar';
+import MasterCatalogPanel from '@/components/MasterCatalogPanel';
 
 // Actions
 import { getRawMaterials, getRawMaterialMasters, deleteRawMaterial } from '@/actions/inventory';
@@ -49,7 +50,6 @@ import {
   Box,
   PackageCheck,
   Truck,
-  PlusCircle,
   ShieldCheck,
   Users,
   Search,
@@ -58,7 +58,6 @@ import {
   Edit,
   AlertTriangle,
   CheckCircle2,
-  Info,
   Layers,
   ArrowDownRight,
   X,
@@ -921,114 +920,15 @@ export default function Home() {
               {/* 8. MASTER ENTRY HUB: ADD MATERIALS / ITEMS */}
               {/* ======================================================== */}
               {activePanel === 'add-materials' && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                      <PlusCircle className="w-5 h-5 text-[#1D9E75]" /> Add Materials / Master Entry Hub
-                    </h2>
-                    <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                      Centralized workspace to define brand new master materials and catalog SKUs
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Add NEW RM Master Card */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-[#1D9E75] transition-all flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
-                          <Wheat className="w-5 h-5 shrink-0" /> Add Brand New Raw Material (Master)
-                        </div>
-                        <p className="text-xs text-slate-400">Create a brand new RM SKU with code, brand name, unit, and reorder levels</p>
-                      </div>
-                      <button
-                        onClick={() => setModalNewRm(true)}
-                        className="w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Create New RM Master
-                      </button>
-                    </div>
-
-                    {/* Add NEW PM Master Card */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-500 transition-all flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-blue-400 font-bold text-base">
-                          <Boxes className="w-5 h-5 shrink-0" /> Add Brand New Packaging (Master)
-                        </div>
-                        <p className="text-xs text-slate-400">Create a brand new bottle, jar, carton, or packaging SKU catalog record</p>
-                      </div>
-                      <button
-                        onClick={() => setModalNewPm(true)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Create New PM Master
-                      </button>
-                    </div>
-
-                    {/* Add NEW FG Master Card */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-blue-400 transition-all flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-blue-400 font-bold text-base">
-                          <PackageCheck className="w-5 h-5 shrink-0" /> Add Brand New Finished Good (Master)
-                        </div>
-                        <p className="text-xs text-slate-400">Register a new manufactured product SKU, shelf-life, and storage guidelines</p>
-                      </div>
-                      <button
-                        onClick={() => setModalNewFg(true)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Create New FG Master
-                      </button>
-                    </div>
-
-                    {/* Quick Action: Post RM Issue */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-emerald-500 transition-all flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-emerald-400 font-bold text-base">
-                          <RefreshCw className="w-5 h-5 shrink-0" /> Post RM Issue to Production
-                        </div>
-                        <p className="text-xs text-slate-400">Deduct raw material batch stock for a factory batch run</p>
-                      </div>
-                      <button
-                        onClick={() => setModalRmIssue(true)}
-                        className="w-full bg-[#1D9E75] hover:bg-[#168361] text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Post RM Issue
-                      </button>
-                    </div>
-
-                    {/* Quick Action: Record Production Run */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-amber-500 transition-all flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-amber-400 font-bold text-base">
-                          <Factory className="w-5 h-5 shrink-0" /> Record Factory Production Run
-                        </div>
-                        <p className="text-xs text-slate-400">Record produced batches and automatically update FG inventory stock</p>
-                      </div>
-                      <button
-                        onClick={() => setModalProduction(true)}
-                        className="w-full bg-amber-500 hover:bg-amber-400 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Record Production
-                      </button>
-                    </div>
-
-                    {/* Quick Action: Post Customer Dispatch */}
-                    <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl p-5 hover:border-indigo-500 transition-all flex flex-col justify-between space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-indigo-400 font-bold text-base">
-                          <Truck className="w-5 h-5 shrink-0" /> Post Customer Dispatch
-                        </div>
-                        <p className="text-xs text-slate-400">Dispatch finished goods orders to distributors and retail clients</p>
-                      </div>
-                      <button
-                        onClick={() => setModalDispatch(true)}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Post Sales Dispatch
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <MasterCatalogPanel
+                  rawMaterialMasters={rawMaterialMasters}
+                  packagedMaterials={packagedMaterials}
+                  finishedGoods={finishedGoods}
+                  onAddRm={() => setModalNewRm(true)}
+                  onAddPm={() => setModalNewPm(true)}
+                  onAddFg={() => setModalNewFg(true)}
+                  onRefresh={loadData}
+                />
               )}
 
               {/* ======================================================== */}

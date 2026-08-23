@@ -14,7 +14,7 @@ import {
 
 export async function getRawMaterials(search?: string, statusFilter?: string) {
   try {
-    const where: any = { isMaster: false };
+    const where: any = { isMaster: false, isArchived: false };
     if (search && search.trim() !== '') {
       where.AND = [
         { isMaster: false },
@@ -40,7 +40,7 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
 
     // A material's real stock is the sum of all its arrival entries
     const allEntries = await prisma.rawMaterial.findMany({
-      where: { isMaster: false },
+      where: { isMaster: false, isArchived: false },
       select: { code: true, stock: true },
     });
     const totalsByCode = sumStockByCode(allEntries);
@@ -61,9 +61,10 @@ export async function getRawMaterials(search?: string, statusFilter?: string) {
   }
 }
 
-export async function getRawMaterialMasters() {
+export async function getRawMaterialMasters(search?: string) {
   try {
     const materials = await prisma.rawMaterial.findMany({
+      where: { isArchived: false },
       orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -75,9 +76,63 @@ export async function getRawMaterialMasters() {
       }
     }
 
-    return { success: true, data: Array.from(map.values()) };
+    // Live stock + batch count per code, so the catalog can warn before archiving
+    const totalsByCode = sumStockByCode(
+      materials.filter((m) => !m.isMaster).map((m) => ({ code: m.code, stock: m.stock }))
+    );
+    const batchCountByCode = new Map<string, number>();
+    for (const m of materials) {
+      if (m.isMaster) continue;
+      batchCountByCode.set(m.code, (batchCountByCode.get(m.code) ?? 0) + 1);
+    }
+
+    let data = Array.from(map.values()).map((m) => ({
+      ...m,
+      totalStock: totalsByCode.get(m.code) ?? 0,
+      batchCount: batchCountByCode.get(m.code) ?? 0,
+    }));
+
+    const term = search?.trim().toLowerCase();
+    if (term) {
+      data = data.filter(
+        (m) =>
+          m.code.toLowerCase().includes(term) ||
+          m.name.toLowerCase().includes(term)
+      );
+    }
+
+    data.sort((a, b) => a.code.localeCompare(b.code));
+
+    return { success: true, data };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch raw material masters' };
+  }
+}
+
+// Soft-delete: retires an RM code across its master + arrival rows.
+// History (RM issues, production logs) is untouched and stays queryable.
+export async function archiveRawMaterialByCode(code: string) {
+  try {
+    const codeClean = code.trim().toUpperCase();
+
+    const rows = await prisma.rawMaterial.findMany({
+      where: { code: codeClean, isArchived: false },
+      select: { id: true },
+    });
+    if (rows.length === 0) {
+      return { success: false, error: `Raw Material "${codeClean}" not found or already deleted.` };
+    }
+
+    const result = await prisma.rawMaterial.updateMany({
+      where: { code: codeClean, isArchived: false },
+      data: { isArchived: true, status: 'Archived' },
+    });
+
+    revalidatePath('/');
+    return { success: true, data: { code: codeClean, archivedRows: result.count } };
+  } catch (error: any) {
+    console.error('Error archiving raw material:', error);
+    return { success: false, error: error.message || 'Failed to delete raw material' };
   }
 }
 
@@ -169,9 +224,13 @@ export async function inwardRawMaterial(data: {
       orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }],
     });
 
+    if (rmTemplate?.isArchived) {
+      return { success: false, error: `Raw Material "${codeClean}" has been deleted and can no longer be used.` };
+    }
+
     const reorderLevel = rmTemplate ? rmTemplate.reorderLevel : 0;
     const existingStock = await prisma.rawMaterial.aggregate({
-      where: { code: codeClean, isMaster: false },
+      where: { code: codeClean, isMaster: false, isArchived: false },
       _sum: { stock: true },
     });
     const totalStock = (existingStock._sum.stock ?? 0) + qty;
@@ -261,7 +320,7 @@ export async function deleteRawMaterial(id: string) {
 
 export async function getPackagingMaterials(search?: string, statusFilter?: string) {
   try {
-    const where: any = {};
+    const where: any = { isArchived: false };
     if (search && search.trim() !== '') {
       where.OR = [
         { code: { contains: search } },
@@ -376,6 +435,10 @@ export async function inwardPackagingMaterial(data: {
       return { success: false, error: `Packaging Material "${codeClean}" not found.` };
     }
 
+    if (pm.isArchived) {
+      return { success: false, error: `Packaging Material "${codeClean}" has been deleted and can no longer be used.` };
+    }
+
     const updatedStock = pm.stock + qty;
     const newStatus = updatedStock <= pm.reorderLevel ? 'Low Stock' : 'Active';
 
@@ -444,6 +507,27 @@ export async function deletePackagingMaterial(id: string) {
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to delete packaging material' };
+  }
+}
+
+// Soft-delete: retires a PM code. Packaging issue history stays untouched.
+export async function archivePackagingMaterial(id: string) {
+  try {
+    const pm = await prisma.packagingMaterial.findUnique({ where: { id } });
+    if (!pm || pm.isArchived) {
+      return { success: false, error: 'Packaging Material not found or already deleted.' };
+    }
+
+    await prisma.packagingMaterial.update({
+      where: { id },
+      data: { isArchived: true, status: 'Archived' },
+    });
+
+    revalidatePath('/');
+    return { success: true, data: { code: pm.code } };
+  } catch (error: any) {
+    console.error('Error archiving packaging material:', error);
     return { success: false, error: error.message || 'Failed to delete packaging material' };
   }
 }

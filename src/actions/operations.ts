@@ -41,7 +41,7 @@ export async function getRMIssues(search?: string) {
 export async function getRMDetailsForIssue(rmCode: string) {
   try {
     const rm = await prisma.rawMaterial.findFirst({
-      where: { code: rmCode.trim().toUpperCase() },
+      where: { code: rmCode.trim().toUpperCase(), isArchived: false },
       orderBy: { createdAt: 'desc' },
     });
     if (!rm) {
@@ -86,16 +86,17 @@ export async function createRMIssue(data: {
             where: {
               code: data.rmCode.trim().toUpperCase(),
               batchNumber: data.batchNumber.trim(),
+              isArchived: false,
             },
             orderBy: { createdAt: 'desc' },
           })
         : null) || await tx.rawMaterial.findFirst({
-            where: { code: data.rmCode.trim().toUpperCase() },
+            where: { code: data.rmCode.trim().toUpperCase(), isArchived: false },
             orderBy: { createdAt: 'desc' },
           });
 
       if (!rm) {
-        throw new Error(`Raw Material "${data.rmCode}" not found.`);
+        throw new Error(`Raw Material "${data.rmCode}" not found or has been deleted.`);
       }
 
       if (rm.stock < issuedQty) {
@@ -216,6 +217,11 @@ export async function createProductionLog(data: {
         where: { sku: data.fgCode.trim().toUpperCase() },
       });
 
+      if (existingFG?.isArchived) {
+        // Rolls back the production log created above
+        throw new Error(`Finished Good SKU "${data.fgCode}" has been deleted and can no longer be used.`);
+      }
+
       if (existingFG) {
         await tx.finishedGood.update({
           where: { id: existingFG.id },
@@ -300,7 +306,7 @@ export async function getPMDetailsForIssue(pmCode: string) {
     const pm = await prisma.packagingMaterial.findUnique({
       where: { code: pmCode.trim().toUpperCase() },
     });
-    if (!pm) {
+    if (!pm || pm.isArchived) {
       return { success: false, error: `Packaging Material Code "${pmCode}" not found` };
     }
     return {
@@ -340,6 +346,10 @@ export async function createPackagingIssue(data: {
 
       if (!pm) {
         throw new Error(`Packaging Material "${data.pmCode}" not found.`);
+      }
+
+      if (pm.isArchived) {
+        throw new Error(`Packaging Material "${data.pmCode}" has been deleted and can no longer be used.`);
       }
 
       if (pm.stock < issuedQty) {
@@ -396,7 +406,7 @@ export async function deletePackagingIssue(id: string) {
 
 export async function getFinishedGoods(search?: string) {
   try {
-    const where: any = {};
+    const where: any = { isArchived: false };
     if (search && search.trim() !== '') {
       where.OR = [
         { sku: { contains: search, mode: 'insensitive' } },
@@ -486,6 +496,10 @@ export async function inwardFinishedGood(data: {
       return { success: false, error: `Finished Good SKU "${skuClean}" not found. Please add it in Add Materials Hub first.` };
     }
 
+    if (fg.isArchived) {
+      return { success: false, error: `Finished Good SKU "${skuClean}" has been deleted and can no longer be used.` };
+    }
+
     const mfg = new Date(data.mfgDate);
     const exp = new Date(data.expiryDate);
     const shelfLifeDays = calculateShelfLifeDays(mfg, exp);
@@ -569,6 +583,27 @@ export async function deleteFinishedGood(id: string) {
   }
 }
 
+// Soft-delete: retires an FG SKU. Production logs and dispatch history stay untouched.
+export async function archiveFinishedGood(id: string) {
+  try {
+    const fg = await prisma.finishedGood.findUnique({ where: { id } });
+    if (!fg || fg.isArchived) {
+      return { success: false, error: 'Finished Good not found or already deleted.' };
+    }
+
+    await prisma.finishedGood.update({
+      where: { id },
+      data: { isArchived: true, status: 'Archived' },
+    });
+
+    revalidatePath('/');
+    return { success: true, data: { sku: fg.sku } };
+  } catch (error: any) {
+    console.error('Error archiving finished good:', error);
+    return { success: false, error: error.message || 'Failed to delete finished good' };
+  }
+}
+
 // ==========================================
 // 5. TAB 5: DISPATCH ACTIONS
 // ==========================================
@@ -621,6 +656,10 @@ export async function createDispatch(data: {
 
       if (!fg) {
         throw new Error(`Finished Good SKU "${data.skuCode}" not found.`);
+      }
+
+      if (fg.isArchived) {
+        throw new Error(`Finished Good SKU "${data.skuCode}" has been deleted and can no longer be used.`);
       }
 
       if (fg.totalStock < dispatchQty) {
