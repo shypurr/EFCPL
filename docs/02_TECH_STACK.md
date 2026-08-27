@@ -19,9 +19,9 @@ This document specifies the core runtime, frameworks, libraries, database driver
 | **Deployment Target** | Render (web service) + Neon (database) | — | `postinstall: prisma generate` regenerates the client on every deploy build. |
 | **Backend Mutations** | Next.js Server Actions | Native | Zero-API-boilerplate type-safe mutations with automatic cache revalidation (`revalidatePath('/')`). |
 | **Validation** | Zod | 4.x | Schema validation primitives available to server actions. |
-| **Authentication & RBAC** | Custom Argon2/PBKDF2 Hashing + Role Matrix | Custom | Modular RBAC model with granular permission keys and audit logging. |
+| **Authentication & RBAC** | Custom PBKDF2 Hashing + Role Matrix | Custom | Modular RBAC model with granular permission keys, session cookies, and user management. |
 
-> **Legacy SQLite**: `@prisma/adapter-better-sqlite3` and `better-sqlite3` remain in `package.json`
+> **Legacy SQLite Packages**: `@prisma/adapter-better-sqlite3` and `better-sqlite3` remain in `package.json`
 > from the pre-migration setup, but nothing imports them — `src/lib/prisma.ts` instantiates the
 > Postgres adapter unconditionally and throws if `DATABASE_URL` is missing.
 
@@ -34,7 +34,10 @@ This document specifies the core runtime, frameworks, libraries, database driver
 |                            CLIENT BROWSER / TABLET                          |
 |  - React 19 UI with Dark Theme & High-Contrast Typography                   |
 |  - Responsive Navigation (Desktop Sidebar / Tablet Topbar / MobileNav)      |
-|  - 12 Operational Modals + Admin/Login Dialogs, Non-Negative Guards         |
+|  - 14 Panels: Dashboard, Alerts, RM, PM, 5 Ops, Master Hub, 2 Admin,        |
+|    Reports, PO Suggestions                                                  |
+|  - Master Catalog Panel (MasterCatalogPanel.tsx) with batch multi-delete    |
+|  - 13 Operational Modals (Modals/*) + EditMaterialModal + Non-Negative Guards|
 +-------------------------------------+---------------------------------------+
                                       |
                                       | Next.js Server Action RPC
@@ -42,8 +45,8 @@ This document specifies the core runtime, frameworks, libraries, database driver
 +-------------------------------------+---------------------------------------+
 |                      SERVER ACTIONS LAYER (@/actions/*)                     |
 |  - inventory.ts / operations.ts / raw-materials.ts / finished-goods.ts      |
-|  - movements.ts / roles.ts / rbac.ts / reports.ts / po-suggestions.ts       |
-|  - lookups.ts / csv-import.ts / auth.ts                                     |
+|  - packaging.ts / movements.ts / roles.ts / rbac.ts / reports.ts            |
+|  - po-suggestions.ts / lookups.ts / csv-import.ts / auth.ts                 |
 |  - Input Validation & Transaction Management (`prisma.$transaction`)        |
 +-------------------------------------+---------------------------------------+
                                       |
@@ -84,3 +87,4 @@ npx prisma db push       # Sync schema to the Postgres database
 npx prisma generate      # Regenerate the typed client (also runs on postinstall)
 npx prisma db seed       # Seed lookups, sample materials & admin credentials
 ```
+

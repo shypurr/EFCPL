@@ -117,7 +117,7 @@ export default function Sidebar({ activePanel, setActivePanel, alertCount }: Sid
           <span>Database Engine</span>
           <div className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Prisma SQLite Core
+            PostgreSQL (Neon)
           </div>
         </div>
         <ShieldCheck className="w-4 h-4 text-slate-600" />

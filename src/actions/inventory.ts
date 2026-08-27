@@ -136,6 +136,84 @@ export async function archiveRawMaterialByCode(code: string) {
   }
 }
 
+// Master-level edit for an RM code.
+// A code owns one master row plus one row per arrival, so identity and
+// material-level settings must stay identical across all of them. Supplier and
+// storage location are defaults for FUTURE arrivals, so they are written only to
+// the master row and never rewrite what past batches actually recorded.
+export async function updateRawMaterialMasterByCode(
+  code: string,
+  data: {
+    name: string;
+    brand?: string | null;
+    unit: string;
+    reorderLevel: number;
+    maxStock?: number | null;
+    supplier?: string | null;
+    location?: string | null;
+  }
+) {
+  try {
+    const codeClean = code.trim().toUpperCase();
+
+    if (!data.name || !data.name.trim()) {
+      return { success: false, error: 'Material name is required' };
+    }
+    const reorderLevel = Number(data.reorderLevel);
+    if (isNaN(reorderLevel) || reorderLevel < 0) {
+      return { success: false, error: 'Reorder level must be zero or greater' };
+    }
+    const maxStock =
+      data.maxStock === undefined || data.maxStock === null || (data.maxStock as any) === ''
+        ? null
+        : Number(data.maxStock);
+    if (maxStock !== null && (isNaN(maxStock) || maxStock < 0)) {
+      return { success: false, error: 'Max stock must be zero or greater' };
+    }
+
+    const rows = await prisma.rawMaterial.findMany({
+      where: { code: codeClean, isArchived: false },
+      orderBy: [{ isMaster: 'desc' }, { createdAt: 'desc' }],
+    });
+    if (rows.length === 0) {
+      return { success: false, error: `Raw Material "${codeClean}" not found.` };
+    }
+
+    // Master row if one exists, else the newest arrival (what the catalog displays)
+    const defaultsTarget = rows.find((r) => r.isMaster) ?? rows[0];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.rawMaterial.updateMany({
+        where: { code: codeClean, isArchived: false },
+        data: {
+          name: data.name.trim(),
+          brand: data.brand?.trim() || null,
+          unit: data.unit.trim(),
+          reorderLevel,
+          maxStock,
+        },
+      });
+
+      await tx.rawMaterial.update({
+        where: { id: defaultsTarget.id },
+        data: {
+          supplier: data.supplier?.trim() || null,
+          location: data.location?.trim() || null,
+        },
+      });
+    });
+
+    // reorderLevel drives low-stock state, so recompute it for the whole code
+    await syncRawMaterialStatusByCode(codeClean);
+
+    revalidatePath('/');
+    return { success: true, data: { code: codeClean, updatedRows: rows.length } };
+  } catch (error: any) {
+    console.error('Error updating raw material master:', error);
+    return { success: false, error: error.message || 'Failed to update raw material' };
+  }
+}
+
 export async function getRawMaterialByCode(code: string) {
   try {
     const item = await prisma.rawMaterial.findFirst({

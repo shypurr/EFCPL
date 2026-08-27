@@ -11,9 +11,11 @@ import {
   X,
   AlertTriangle,
   ChevronRight,
+  Pencil,
 } from 'lucide-react';
 import { archiveRawMaterialByCode, archivePackagingMaterial } from '@/actions/inventory';
 import { archiveFinishedGood } from '@/actions/operations';
+import EditMaterialModal from '@/components/Modals/EditMaterialModal';
 
 type CatalogType = 'RM' | 'PM' | 'FG';
 
@@ -34,6 +36,8 @@ interface CatalogRecord {
   batchNumber?: string | null;
   expiryDate?: string | Date | null;
   shelfLifeDays?: number | null;
+  /** Remaining Prisma columns pass through untouched to the edit modal */
+  [key: string]: unknown;
 }
 
 interface CatalogRow {
@@ -128,6 +132,7 @@ export default function MasterCatalogPanel({
   const [selectMode, setSelectMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<CatalogRow[] | null>(null);
+  const [editing, setEditing] = useState<CatalogRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -478,13 +483,22 @@ export default function MasterCatalogPanel({
                         </td>
                       ))}
                       <td className="p-3 text-center">
-                        <button
-                          onClick={() => setPendingDelete([row])}
-                          className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                          title={`Delete ${row.code}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => setEditing(row.raw)}
+                            className="p-1.5 rounded text-slate-300 hover:text-white hover:bg-[#1E2F4A] transition-all cursor-pointer"
+                            title={`Edit ${row.code}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setPendingDelete([row])}
+                            className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                            title={`Delete ${row.code}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -494,6 +508,14 @@ export default function MasterCatalogPanel({
           </table>
         </div>
       </div>
+
+      <EditMaterialModal
+        isOpen={editing !== null}
+        type={activeType}
+        record={editing}
+        onClose={() => setEditing(null)}
+        onSuccess={onRefresh}
+      />
 
       {/* Delete confirmation */}
       {pendingDelete && (

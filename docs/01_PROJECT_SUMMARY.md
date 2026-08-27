@@ -9,9 +9,9 @@ This system provides a high-performance, real-time **Manufacturing Execution Sys
 
 ## 2. Core Business Goals & System Structure
 
-The application is architected into 4 primary pillars:
+The application is architected into 5 primary pillars across 14 interactive panels:
 
-### 📦 I. Inventory Section
+### 📦 I. Inventory Section (Discrete Batch & Aggregation Model)
 1. **Raw Materials (RM)**:
    - **Master Registration ≠ Stock**: *+ Add Raw Material* registers a catalog SKU only (zero stock, no batch). Stock exists solely because an arrival was logged.
    - **Discrete Batch Logging**: Incoming raw material arrivals are logged as independent batch records rather than merging with existing stock.
@@ -29,34 +29,42 @@ The application is architected into 4 primary pillars:
    - Dynamic **"Issue For"** target Finished Goods (FG) selector linked to active FG products.
 2. **Production Log**:
    - Record manufacturing runs (Linked FG Code & Name, Total Batches Made, Total Output, Wastage, MFG Date, Expiry Date, Operator).
+   - **Automatic Stock Addition**: Increases `FinishedGood` total stock and updates latest batch information upon recording.
 3. **Packaging Issue**:
-   - Issue packaging supplies (Jars, Cartons, Caps) against target FG production runs.
+   - Issue packaging supplies (Jars, Cartons, Caps) against target FG production runs, atomically decrementing PM stock.
 4. **Finished Goods (FG)**:
    - Master catalog and cold room inventory for manufactured food items.
    - **Auto-Calculated Shelf Life**: Automatically computes shelf life in days from $(\text{Expiry Date} - \text{MFG Date})$.
 5. **Dispatch Log**:
    - Customer and distributor shipments (Buyer Name, SKU Code, Product Name, Batch Code, Positive Dispatch Qty, Dispatch Date, Location, CoA Status).
+   - **Automatic Stock Deduction**: Atomically decrements `FinishedGood` stock upon dispatch confirmation.
 
-### ➕ III. Master Entry Hub (Add Materials / Products)
-Centralized modal creation hub for catalog definitions:
-- `+ Add Raw Material` — registers a master SKU **only**; creates no stock and no batch. Duplicate master codes are rejected.
-- `+ Add Packaging Material` (Master Catalog SKU — PM uses one aggregated row per code)
-- `+ Add Finished Good SKU` (Master Catalog SKU)
-- `+ Post GRN Receipt` (Goods Receipt Note)
-- `+ Add Lookup Value` (units, storage locations, CoA statuses, brands via `SystemLookup`)
+### 📋 III. Master Catalog Hub & Safe Archiving Panel (`MasterCatalogPanel.tsx`)
+Centralized interactive catalog management hub:
+- **2-Level Navigation**:
+  - **Level 1**: Top-level 3-card picker for Raw Materials (RM), Packaging Materials (PM), and Finished Goods (FG) with live item counters.
+  - **Level 2**: Comprehensive catalog tables displaying codes/SKUs, names, units, reorder levels, max stock, current total stock, default suppliers, and storage locations.
+- **Batch Deletion & Selection**: Checkbox multi-select mode to delete multiple catalog items in one click or delete single items with confirmation.
+- **Safe Soft-Deletion / Archival (`isArchived`)**: Deleting an item marks it as `isArchived: true` and `status: 'Archived'`, preserving full historical integrity (past RM issues, packaging issues, production logs, dispatches) while hiding it from active lists and blocking new operations on deleted SKUs.
+- **Inline Master Editing (`EditMaterialModal.tsx`)**: Edit material-level settings (name, brand, unit, reorder level, max stock, default supplier/location) and synchronize recomputed status across all batches.
 
-### 🛡️ IV. Role-Based Access Control (RBAC) & Security
-- **Granular Permissions ("Add Roles")**: Discord-style permission toggle matrix across modules (`inventory`, `operations`, `reports`, `admin`).
+### 📊 IV. Factory Intelligence, PO Suggestions & Reports
+- **PO Suggestions Engine (`po-suggestions.ts`)**: Automatically calculates replenishment quantities for materials at or below reorder levels (`Math.max(0, maxStock - stock)` or `reorderLevel * 3`).
+- **Real-Time Alerts Dashboard**: Centralized factory warnings with instant "Generate PO" action triggers.
+- **Factory Reports & FG Aging (`reports.ts`)**: Summarizes total factory stock volume, lifetime dispatches, and computes Finished Goods batch aging with days remaining until expiration.
+
+### 🛡️ V. Role-Based Access Control (RBAC) & Security
+- **Granular Permissions ("Discord-Style Roles")**: Modular permission toggle matrix across modules (`inventory`, `operations`, `reports`, `admin`) with custom role color tags.
 - **Staff User Provisioning ("Add User")**: Create unique login credentials with assigned roles.
-- **Audit Trails**: `AuditLog` model in place (user, action, entity, JSON details, timestamp). Write paths are **not yet instrumented** — scheduled for Phase 8.
+- **Authentication**: PBKDF2/Argon2 password hashing and HTTP-only session cookie management.
 
 ---
 
 ## 3. Key User Experience & Quality Safeguards
-- **Universal Non-Negative Input Enforcement**: All numeric fields (quantities, stock levels, reorder thresholds, batch counts) enforce `min="0"` with runtime guards blocking negative entries or scrolling into negative values.
+- **Universal Non-Negative Input Enforcement**: All numeric fields enforce `min="0"` with runtime guards blocking negative entries.
 - **Dynamic Changeable Unit Dropdowns**: Unit fields auto-populate from material records while remaining editable via dropdown options (`KG`, `Units`, `Boxes`).
-- **Role-Appropriate Form Fields**: Clean operational dialogs streamlined for factory floor operators — the free-text **Remarks** field has been removed from *every* entry modal (RM/PM inward, RM issue, packaging issue, production, dispatch, GRN, master creation).
-- **Responsive Dark Theme UI**: Tailored for factory lighting conditions with full mobile and tablet touch optimizations, collapsible mobile navigation, and horizontal scroll tables.
+- **Role-Appropriate Form Fields**: Clean operational dialogs streamlined for factory floor operators — free-text **Remarks** fields have been removed from entry modals and persist as `null`.
+- **Responsive Dark Theme UI**: Tailored for factory lighting conditions with full mobile and tablet touch optimizations, fixed bottom navigation bar (`MobileNav`), slide-out drawer, and horizontal-scroll data tables.
 
 ---
 
@@ -64,3 +72,4 @@ Centralized modal creation hub for catalog definitions:
 - **Database**: PostgreSQL on **Neon** (serverless), accessed via Prisma 7 + `@prisma/adapter-pg`. The former local SQLite setup has been retired.
 - **Hosting**: **Render** web service; `prisma generate` runs on `postinstall` so each deploy builds a fresh typed client.
 - **Configuration**: Single `DATABASE_URL` env var; the Prisma client fails fast at construction if it is missing and enables TLS automatically for non-local hosts.
+

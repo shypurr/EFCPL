@@ -26,6 +26,13 @@ export async function updateRawMaterial(id: string, data: Parameters<typeof inve
   return inventory.updateRawMaterial(id, data);
 }
 
+export async function updateRawMaterialMasterByCode(
+  code: string,
+  data: Parameters<typeof inventory.updateRawMaterialMasterByCode>[1]
+) {
+  return inventory.updateRawMaterialMasterByCode(code, data);
+}
+
 export async function inwardRawMaterial(data: Parameters<typeof inventory.inwardRawMaterial>[0]) {
   return inventory.inwardRawMaterial(data);
 }
