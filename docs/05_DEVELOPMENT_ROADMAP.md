@@ -5,65 +5,55 @@
 ```
 +-----------------------------------------------------------------------------+
 | PHASE 1: Architecture & Technical Specifications (COMPLETED)                |
-| - Domain Modeling, Multi-Section Navigation Hierarchy, Specs                |
+| - Domain modeling, multi-section navigation hierarchy, specs                |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 2: Database Schema & Setup (COMPLETED)                                |
 | - Prisma v7 ORM, SQLite adapter (later Postgres), Inventory/Ops/RBAC tables |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 3: Backend API & Server Actions Layer (COMPLETED)                     |
-| - Server Actions: inventory.ts, operations.ts, raw-materials.ts,            |
-|   finished-goods.ts, packaging.ts, movements.ts, roles.ts, auth.ts          |
+| - 3 implementation modules (inventory, operations, rbac) + 6 proxy modules  |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 4: Frontend Responsive UI & Modals (COMPLETED)                        |
-| - 14 Interactive Panels, 13 Modals, Desktop Sidebar, MobileNav & Topbar    |
+| - 14 panels, 14 wired dialogs, Sidebar + Topbar + MobileNav                 |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 5: Operational Safeguards & Batch Traceability (COMPLETED)            |
-| - Discrete RM Arrival Logging, Reverse-Chronological Sorting, Non-Negative  |
-|   Input Controls, Dynamic FG Dropdowns, Changeable Units                    |
+| - Discrete RM arrival logging, reverse-chronological sorting, non-negative  |
+|   input controls, dynamic FG dropdowns, changeable units, $transaction      |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 6: Cloud Database Migration (COMPLETED)                               |
 | - PostgreSQL/Neon datasource, @prisma/adapter-pg, Render deploy config      |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 6.5: RM Master / Arrival Separation (COMPLETED)                       |
 | - isMaster flag, material-level stock aggregation, remarks removed          |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 7: Master Catalog Hub & Safe Archival System (COMPLETED)              |
 | - MasterCatalogPanel (2-level drilldown), isArchived soft-deletion,         |
 |   batch multi-select deletion, EditMaterialModal inline editing             |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
 | PHASE 8: Factory Intelligence, PO Suggestions & Reports (COMPLETED)         |
-| - PO Replenishment Engine (po-suggestions.ts), Reports & FG Aging           |
-|   (reports.ts), Real-time Alerts Panel                                      |
+| - PO replenishment engine, reports & FG aging, real-time alerts panel       |
 +------------------------------------+----------------------------------------+
-                                     |
                                      v
 +------------------------------------+----------------------------------------+
-| PHASE 9: Production Hardening & PWA (PLANNED)                               |
-| - PWA Manifest, Offline Worker, E2E test suite, Audit-log write instrumentation|
+| PHASE 9: Correctness, Security & Hardening (IN PROGRESS / PLANNED)          |
+| - 9a Stock-model drift fixes    - 9b RBAC enforcement                       |
+| - 9c Cleanup & dependency prune - 9d Migrations, audit log, PWA, tests      |
 +-----------------------------------------------------------------------------+
 ```
 
@@ -72,59 +62,92 @@
 ## 2. Milestone Checklist
 
 ### Phase 1: Architecture & Documentation (✅ Completed)
-- [x] Document core food processing workflows and inventory structure.
-- [x] Structure primary system areas: Inventory (RM/PM), Operations (5 Tabs), Master Creation Hub, and Security & RBAC.
+- [x] Document core food-processing workflows and inventory structure.
+- [x] Structure primary system areas: Inventory (RM/PM), Operations (5 panels), Master Creation Hub, Security & RBAC.
 
 ### Phase 2: Prisma Schema & Database Engine (✅ Completed)
 - [x] Configure Prisma v7 with PostgreSQL on Neon (`@prisma/adapter-pg`).
-- [x] Implement schema for `RawMaterial`, `PackagingMaterial`, `RMIssue`, `ProductionLog`, `PackagingIssue`, `FinishedGood`, `Dispatch`, and RBAC.
-- [x] Database schema sync (`prisma db push`) and client generation (`prisma generate`).
+- [x] 14 models: `RawMaterial`, `PackagingMaterial`, `RMIssue`, `ProductionLog`, `PackagingIssue`, `FinishedGood`, `Dispatch`, `SystemLookup`, `StorageLocation`, `Permission`, `Role`, `RolePermission`, `User`, `AuditLog`.
+- [x] Schema sync (`prisma db push`) and client generation (`prisma generate` on `postinstall`).
 
 ### Phase 3: Server Actions Layer (✅ Completed)
-- [x] Build Raw Material & Packaging CRUD actions (`src/actions/inventory.ts`, `src/actions/raw-materials.ts`, `src/actions/packaging.ts`).
-- [x] Build Operations pipeline actions (`src/actions/operations.ts`, `src/actions/finished-goods.ts`, `src/actions/movements.ts`).
-- [x] Implement RBAC and Authentication actions (`src/actions/auth.ts`, `src/actions/roles.ts`, `src/actions/rbac.ts`).
-- [x] Implement CSV import handler (`src/actions/csv-import.ts`).
+- [x] RM & PM CRUD, inward logging, archiving and master editing ([`inventory.ts`](../src/actions/inventory.ts)).
+- [x] Five operations pipelines, all transactional ([`operations.ts`](../src/actions/operations.ts)).
+- [x] Roles, permissions, users, login and session ([`rbac.ts`](../src/actions/rbac.ts)).
+- [x] Reports ([`reports.ts`](../src/actions/reports.ts)) and PO suggestions ([`po-suggestions.ts`](../src/actions/po-suggestions.ts)).
+- [x] Domain-named proxy modules: `raw-materials.ts`, `packaging.ts`, `finished-goods.ts`, `movements.ts`, `auth.ts`, `roles.ts`.
+- [~] CSV importer written ([`csv-import.ts`](../src/actions/csv-import.ts)) but **never wired to a UI entry point**.
+- [~] Lookup actions written ([`lookups.ts`](../src/actions/lookups.ts)) but **no live caller** — dropdown values are hardcoded in the modals.
 
 ### Phase 4: Frontend Development & Responsive UI (✅ Completed)
-- [x] Responsive layout with dark theme palette (`#070E1A`, `#0D1B2E`, `#162440`, `#1D9E75`).
-- [x] 14 dedicated interactive panels covering Dashboard, Inventory, Operations, Master Entry Hub, Admin & Governance, Reports, and Alerts.
-- [x] 13 operational and catalog modals plus `EditMaterialModal`, `RoleManagerModal`, `UserManagerModal`, and `LoginModal`.
-- [x] Mobile and tablet viewports with fixed bottom `MobileNav` bar, slide-out full navigation drawer, and horizontal scrolling tables.
+- [x] Dark theme palette (`#070E1A`, `#0D1B2E`, `#162440`, `#1D9E75`) via CSS variables in `globals.css`.
+- [x] 14 panels covering Dashboard, Alerts, Inventory, 5 Operations, Master Entry Hub, Admin, Reports and PO Suggestions.
+- [x] 14 wired dialogs: 11 under `Modals/` plus `LoginModal`, `RoleManagerModal` and `UserManagerModal`.
+- [x] Mobile and tablet viewports with a fixed bottom `MobileNav` (5 tabs), a full slide-out drawer, and horizontally scrolling tables.
+- [~] `GRNModal.tsx` and `AddLookupModal.tsx` exist under `Modals/` but are imported by nothing.
 
 ### Phase 5: Safeguards & Traceability (✅ Completed)
-- [x] **Discrete RM Batch Arrivals**: Incoming shipments log as separate records rather than merging stock.
-- [x] **Reverse-Chronological Ordering**: Latest incoming entries displayed at the top (`createdAt: desc`).
-- [x] **Universal Non-Negative Controls**: `min="0"` on all numeric inputs with negative keystroke prevention.
-- [x] **Dynamic FG Dropdowns**: "Issue For" selectors linked dynamically to active Finished Goods.
-- [x] **Changeable Unit Dropdown**: Dropdown selector with `KG`, `Units`, `Boxes`, etc. for inward raw materials.
+- [x] **Discrete RM batch arrivals**: incoming shipments log as separate rows rather than merging stock.
+- [x] **Reverse-chronological ordering** (`createdAt: desc`).
+- [x] **Non-negative controls**: `min="0"` on numeric inputs plus change-handler guards.
+- [x] **Server-side guards**: `qty > 0`, sufficient-stock checks, archived-item rejection, duplicate-code rejection.
+- [x] **Atomic movements**: `prisma.$transaction` around all five operations write paths.
+- [x] **Dynamic FG dropdowns** and changeable unit selectors.
 
 ### Phase 6: Cloud Database Migration (✅ Completed)
-- [x] Switch the Prisma datasource to `postgresql` and wire `@prisma/adapter-pg` + `pg` `Pool` in `src/lib/prisma.ts`.
+- [x] Prisma datasource switched to `postgresql`; `@prisma/adapter-pg` + `pg` `Pool` wired in [`prisma.ts`](../src/lib/prisma.ts).
 - [x] Fail fast when `DATABASE_URL` is absent; auto-enable TLS for non-`localhost` hosts.
 - [x] Neon connection string documented in `.env.example`; `postinstall: prisma generate` for Render builds.
 - [x] Environment-gated query logging and a `globalThis`-cached client for dev hot reloads.
 
 ### Phase 6.5: RM Master / Arrival Separation (✅ Completed)
-- [x] **`isMaster` flag on `RawMaterial`**: catalog SKUs and physical arrivals live as distinct row kinds in one table.
-- [x] **`createRawMaterial` registers only**: writes `stock: 0`, `batchNumber: ''`, `expiryDate: null` — no phantom opening batch, and rejects duplicate master codes.
-- [x] **`getRawMaterials` filters `isMaster: false`**: the RM table shows arrivals only; `getRawMaterialMasters()` feeds code dropdowns.
-- [x] **Material-level stock model** (`src/lib/inventory-utils.ts`): `sumStockByCode`, `resolveStockStatus`, `getRawMaterialTotalStock`, `syncRawMaterialStatusByCode`; `materialStock` / `isLowStock` derived on read.
+- [x] **`isMaster` flag on `RawMaterial`**: catalog SKUs and physical arrivals as distinct row kinds in one table.
+- [x] **`createRawMaterial` registers only**: `stock: 0`, `batchNumber: ''`, `expiryDate: null`; rejects duplicate master codes.
+- [x] **`getRawMaterials` filters `isMaster: false`**; `getRawMaterialMasters()` feeds the code dropdowns.
+- [x] **Material-level stock helpers** ([`inventory-utils.ts`](../src/lib/inventory-utils.ts)): `sumStockByCode`, `resolveStockStatus`, `getRawMaterialTotalStock`, `syncRawMaterialStatusByCode`.
 - [x] **Remarks removed from entry modals**; all write paths persist `remarks: null`.
 
 ### Phase 7: Master Catalog Hub & Safe Archival System (✅ Completed)
-- [x] **2-Level Master Catalog Panel (`MasterCatalogPanel.tsx`)**: Category picker (RM/PM/FG) with item counts + detailed catalog tables.
-- [x] **Safe Soft-Deletion / Archival (`isArchived: true`)**: `archiveRawMaterialByCode`, `archivePackagingMaterial`, and `archiveFinishedGood` mark items as archived rather than deleting rows, preserving historical issue, production, and dispatch logs.
-- [x] **Batch Multi-Select Deletion**: Select-all / individual checkboxes for multi-item deletion with batch confirmation dialog.
-- [x] **Inline Catalog Editor (`EditMaterialModal.tsx`)**: Edit material-level attributes (`name`, `brand`, `unit`, `reorderLevel`, `maxStock`, `supplier`, `location`) and synchronize recomputed status across all batch records.
+- [x] **2-level Master Catalog Panel**: category picker with counts plus detailed catalog tables.
+- [x] **Safe soft-deletion**: `archiveRawMaterialByCode`, `archivePackagingMaterial`, `archiveFinishedGood`.
+- [x] **Batch multi-select deletion** with a stock-aware confirmation dialog.
+- [x] **Inline catalog editor** with per-category field specs and read-only code/SKU.
 
 ### Phase 8: Factory Intelligence, PO Suggestions & Reports (✅ Completed)
-- [x] **Automated PO Suggestion Engine (`po-suggestions.ts`)**: Evaluates stock against reorder/max stock thresholds and suggests purchase order quantities.
-- [x] **Factory Reports & Inventory Aging (`reports.ts`)**: Overall stock valuation summary and FG aging calculations (`daysLeft` until expiration, `ageDays` from MFG).
-- [x] **Factory Floor Alerts View**: Centralized real-time alert cards with quick "Generate PO" action buttons.
+- [x] **PO suggestion engine**: `max(0, target − stock)` with `target = maxStock ?? (reorderLevel × 3, else 100)`.
+- [x] **Reports & FG aging**: stock summaries, last 100 dispatches, `ageDays` / `daysLeft` per in-stock SKU.
+- [x] **Alerts panel** with per-material "Generate PO" jumps and a live alert badge.
 
-### Phase 9: Production Hardening & PWA (📋 Planned)
-- [ ] PWA Web Manifest & Service Worker registration.
-- [ ] Automated end-to-end integration test suite.
-- [ ] Write-path audit log instrumentation (`AuditLog` model exists; write hooks planned).
+---
 
+### Phase 9: Correctness, Security & Hardening (📋 Open)
+
+Ordered by risk. Items 9a and 9b are the ones that change what operators see and who can do what.
+
+#### 9a — Close the stock-model drift *(see [03 §5](03_SYSTEM_ARCHITECTURE_AND_DESIGN.md#5-known-drift-between-the-stock-model-and-its-consumers))*
+- [ ] Render `materialStock` / `isLowStock` in the RM table and dashboard instead of per-row `stock <= reorderLevel` — the fields are already computed and currently discarded.
+- [ ] Derive `lowRmCount` (and the Alerts panel cards) from material-level totals so multi-batch codes stop over-counting.
+- [ ] Call `syncRawMaterialStatusByCode` at the end of `createRMIssue` — the only stock mutation that skips it.
+- [ ] Filter `po-suggestions.ts` and `reports.ts` with `where: { isMaster: false, isArchived: false }`; today they include zero-stock master rows and archived materials.
+- [ ] Make `getRMDetailsForIssue` resolve the same row `createRMIssue` will decrement (match on `batchNumber`, not newest-first).
+- [ ] Decide whether `getRawMaterialTotalStock` should be used or removed — it currently has no caller.
+
+#### 9b — Enforce RBAC
+- [ ] Add a server-side guard (`requirePermission(key)`) that reads `getCurrentUser()` and rejects unauthorized mutations. **No action checks the session today.**
+- [ ] Gate panel visibility and action buttons in `page.tsx` on `currentUser.permissions`.
+- [ ] Replace the `setupFirstTimePassword` → `loginUser` alias with a real first-login flow, or drop the two-step `LoginModal` branch.
+- [ ] Remove the seeded default credentials (`admin/admin123`, `manager/manager123`) and the `efcpl123` fallback password from production paths.
+
+#### 9c — Cleanup
+- [ ] Delete or wire up `GRNModal.tsx` and `AddLookupModal.tsx`.
+- [ ] Delete or wire up `csv-import.ts` and `lookups.ts`; if lookups stay, seed `SystemLookup` / `StorageLocation` and replace the hardcoded unit/location arrays in the modals.
+- [ ] Remove `patch2.js` (a stale one-off codemod that was never applied) and `prisma/dev.db` (pre-Postgres SQLite leftover).
+- [ ] Prune unused dependencies: `zod`, `clsx`, `tailwind-merge`, `date-fns`, `better-sqlite3`, `@prisma/adapter-better-sqlite3`, `@types/better-sqlite3`.
+- [ ] Reduce `any` usage in action payloads and component props; `strict` is on but largely bypassed.
+
+#### 9d — Production hardening
+- [ ] **Migrations**: adopt `prisma migrate dev` / `migrate deploy`. `prisma.config.ts` already points at `prisma/migrations`, but the directory does not exist and the schema is applied with `db push`.
+- [ ] **Audit log**: write `AuditLog` rows on mutations. The model, relation and indexes exist; nothing inserts.
+- [ ] **PWA**: add the missing `public/icon-192.png` and `public/icon-512.png` referenced by `manifest.json`, then register a service worker. The manifest itself is already linked from `layout.tsx`.
+- [ ] **Tests**: no test framework, unit tests or E2E suite exists. Start with `inventory-utils.ts` and the five transactional write paths.
+- [ ] **Split `page.tsx`** (1 555 lines, one client component) into per-panel components.
