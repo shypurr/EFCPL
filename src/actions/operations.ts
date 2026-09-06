@@ -156,12 +156,43 @@ export async function createRMIssue(data: {
   }
 }
 
+// Deleting a posted issue RETURNS the stock. The log records which batches were
+// drained but not how much came from each, so the whole quantity goes back to the
+// oldest surviving batch of that code. The UI warns about this before confirming.
 export async function deleteRMIssue(id: string) {
   try {
-    await prisma.rMIssue.delete({ where: { id } });
+    const result = await prisma.$transaction(async (tx) => {
+      const issue = await tx.rMIssue.findUnique({ where: { id } });
+      if (!issue) throw new Error('RM issue not found.');
+
+      let restoredTo: string | null = null;
+      if (issue.rmCode && issue.issuedStock > 0) {
+        const target = await tx.rawMaterial.findFirst({
+          where: { code: issue.rmCode, isMaster: false, isArchived: false },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (!target) {
+          throw new Error(
+            `Cannot restore ${issue.issuedStock} to "${issue.rmCode}" — it has no active batch left. Log an inward arrival first.`
+          );
+        }
+        await tx.rawMaterial.update({
+          where: { id: target.id },
+          data: { stock: target.stock + issue.issuedStock },
+        });
+        restoredTo = target.batchNumber || target.id;
+      }
+
+      await tx.rMIssue.delete({ where: { id } });
+      return { code: issue.rmCode, restored: issue.issuedStock, restoredTo };
+    });
+
+    if (result.code) await syncRawMaterialStatusByCode(result.code);
+
     revalidatePath('/');
-    return { success: true };
+    return { success: true, data: result };
   } catch (error: any) {
+    console.error('Error deleting RM issue:', error);
     return { success: false, error: error.message || 'Failed to delete RM issue' };
   }
 }
@@ -281,12 +312,38 @@ export async function createProductionLog(data: {
   }
 }
 
+// Deleting a production run REMOVES its output from finished goods stock.
 export async function deleteProductionLog(id: string) {
   try {
-    await prisma.productionLog.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const log = await tx.productionLog.findUnique({ where: { id } });
+      if (!log) throw new Error('Production log not found.');
+
+      const fg = await tx.finishedGood.findUnique({ where: { sku: log.fgCode } });
+      if (fg && log.totalOutput > 0) {
+        const newStock = fg.totalStock - log.totalOutput;
+        if (newStock < 0) {
+          throw new Error(
+            `Cannot delete: ${fg.name} only has ${fg.totalStock} ${fg.unit} in stock but this run produced ${log.totalOutput}. Some of it has already been dispatched.`
+          );
+        }
+        await tx.finishedGood.update({
+          where: { id: fg.id },
+          data: {
+            totalStock: newStock,
+            quantityProduced: Math.max(0, fg.quantityProduced - log.totalOutput),
+            status: newStock === 0 ? 'Out of Stock' : fg.status,
+          },
+        });
+      }
+
+      await tx.productionLog.delete({ where: { id } });
+    });
+
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
+    console.error('Error deleting production log:', error);
     return { success: false, error: error.message || 'Failed to delete production log' };
   }
 }
@@ -407,12 +464,34 @@ export async function createPackagingIssue(data: {
   }
 }
 
+// Deleting a packaging issue RETURNS the packaging to stock.
 export async function deletePackagingIssue(id: string) {
   try {
-    await prisma.packagingIssue.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const issue = await tx.packagingIssue.findUnique({ where: { id } });
+      if (!issue) throw new Error('Packaging issue not found.');
+
+      if (issue.pmCode && issue.issuedQty > 0) {
+        const pm = await tx.packagingMaterial.findUnique({ where: { code: issue.pmCode } });
+        if (pm) {
+          const newStock = pm.stock + issue.issuedQty;
+          await tx.packagingMaterial.update({
+            where: { id: pm.id },
+            data: {
+              stock: newStock,
+              status: newStock <= pm.reorderLevel ? 'Low Stock' : 'Active',
+            },
+          });
+        }
+      }
+
+      await tx.packagingIssue.delete({ where: { id } });
+    });
+
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
+    console.error('Error deleting packaging issue:', error);
     return { success: false, error: error.message || 'Failed to delete packaging issue' };
   }
 }
@@ -737,15 +816,147 @@ export async function createDispatch(data: {
   }
 }
 
+// Deleting a dispatch RETURNS the shipped quantity to finished goods stock.
 export async function deleteDispatch(id: string) {
   try {
-    await prisma.dispatch.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const dispatch = await tx.dispatch.findUnique({ where: { id } });
+      if (!dispatch) throw new Error('Dispatch entry not found.');
+
+      if (dispatch.skuCode && dispatch.dispatchQty > 0) {
+        const fg = await tx.finishedGood.findUnique({ where: { sku: dispatch.skuCode } });
+        if (fg) {
+          await tx.finishedGood.update({
+            where: { id: fg.id },
+            data: {
+              totalStock: fg.totalStock + dispatch.dispatchQty,
+              status: 'In Stock',
+            },
+          });
+        }
+      }
+
+      await tx.dispatch.delete({ where: { id } });
+    });
+
     revalidatePath('/');
     return { success: true };
   } catch (error: any) {
+    console.error('Error deleting dispatch:', error);
     return { success: false, error: error.message || 'Failed to delete dispatch entry' };
   }
 }
 
 // Alias export for backward compatibility
 export const postDispatch = createDispatch;
+
+// ==========================================
+// 6. TRANSACTION LOG METADATA EDITS
+// ==========================================
+// Posted stock movements are immutable in quantity: the numbers below were already
+// applied to inventory, and an RM issue in particular drained several batches FIFO
+// without recording how much came from each. These actions therefore edit only the
+// descriptive fields. To correct a quantity, delete the entry (which reverses the
+// stock movement) and post it again.
+
+export async function updateRMIssue(
+  id: string,
+  data: Partial<{ issueFor: string; issuedBy: string; issuedDate: string | Date }>
+) {
+  try {
+    const updateData: any = {};
+    if (data.issueFor !== undefined) updateData.issueFor = data.issueFor.trim();
+    if (data.issuedBy !== undefined) updateData.issuedBy = data.issuedBy.trim() || 'Store Manager';
+    if (data.issuedDate) updateData.issuedDate = new Date(data.issuedDate);
+
+    const updated = await prisma.rMIssue.update({ where: { id }, data: updateData });
+    revalidatePath('/');
+    return { success: true, data: updated };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update RM issue' };
+  }
+}
+
+export async function updateProductionLog(
+  id: string,
+  data: Partial<{
+    fgName: string;
+    totalBatchesMade: number;
+    wastage: number;
+    mfgDate: string | Date;
+    expiryDate: string | Date;
+    operator: string;
+  }>
+) {
+  try {
+    const updateData: any = {};
+    if (data.fgName !== undefined) updateData.fgName = data.fgName.trim();
+    if (data.operator !== undefined) updateData.operator = data.operator.trim() || 'Production Supervisor';
+    if (data.totalBatchesMade !== undefined) {
+      const n = Number(data.totalBatchesMade);
+      if (isNaN(n) || n < 0) return { success: false, error: 'Batches made must be zero or greater' };
+      updateData.totalBatchesMade = Math.round(n);
+    }
+    if (data.wastage !== undefined) {
+      const n = Number(data.wastage);
+      if (isNaN(n) || n < 0) return { success: false, error: 'Wastage must be zero or greater' };
+      updateData.wastage = n;
+    }
+    if (data.mfgDate) updateData.mfgDate = new Date(data.mfgDate);
+    if (data.expiryDate) updateData.expiryDate = new Date(data.expiryDate);
+
+    const updated = await prisma.productionLog.update({ where: { id }, data: updateData });
+    revalidatePath('/');
+    return { success: true, data: updated };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update production log' };
+  }
+}
+
+export async function updatePackagingIssue(
+  id: string,
+  data: Partial<{ issueFor: string; issuedBy: string; issuedDate: string | Date }>
+) {
+  try {
+    const updateData: any = {};
+    if (data.issueFor !== undefined) updateData.issueFor = data.issueFor.trim();
+    if (data.issuedBy !== undefined) updateData.issuedBy = data.issuedBy.trim() || 'Store Manager';
+    if (data.issuedDate) updateData.issuedDate = new Date(data.issuedDate);
+
+    const updated = await prisma.packagingIssue.update({ where: { id }, data: updateData });
+    revalidatePath('/');
+    return { success: true, data: updated };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update packaging issue' };
+  }
+}
+
+export async function updateDispatch(
+  id: string,
+  data: Partial<{
+    productName: string;
+    batchCode: string;
+    partyName: string;
+    dispatchDate: string | Date;
+    location: string | null;
+    coaStatus: string;
+    dispatchedBy: string;
+  }>
+) {
+  try {
+    const updateData: any = {};
+    if (data.productName !== undefined) updateData.productName = data.productName.trim();
+    if (data.batchCode !== undefined) updateData.batchCode = data.batchCode.trim();
+    if (data.partyName !== undefined) updateData.partyName = data.partyName.trim();
+    if (data.coaStatus !== undefined) updateData.coaStatus = data.coaStatus;
+    if (data.dispatchedBy !== undefined) updateData.dispatchedBy = data.dispatchedBy.trim() || 'Dispatch Officer';
+    if (data.dispatchDate) updateData.dispatchDate = new Date(data.dispatchDate);
+    if (data.location !== undefined) updateData.location = data.location?.trim() || null;
+
+    const updated = await prisma.dispatch.update({ where: { id }, data: updateData });
+    revalidatePath('/');
+    return { success: true, data: updated };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Failed to update dispatch' };
+  }
+}

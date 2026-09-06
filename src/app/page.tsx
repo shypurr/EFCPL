@@ -38,6 +38,7 @@ import ProductionModal from '@/components/Modals/ProductionModal';
 import PackagingIssueModal from '@/components/Modals/PackagingIssueModal';
 import DispatchModal from '@/components/Modals/DispatchModal';
 import LoginModal from '@/components/LoginModal';
+import EditEntryModal, { EntryType } from '@/components/Modals/EditEntryModal';
 import RoleManagerModal from '@/components/Admin/RoleManagerModal';
 import UserManagerModal from '@/components/Admin/UserManagerModal';
 
@@ -109,6 +110,9 @@ export default function Home() {
   const [modalUser, setModalUser] = useState(false);
 
   const [dbError, setDbError] = useState<string | null>(null);
+
+  // Inline row editing across every data table
+  const [editEntry, setEditEntry] = useState<{ type: EntryType; record: any } | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -193,22 +197,33 @@ export default function Home() {
   };
 
   const handleDeleteRMIssueItem = async (id: string) => {
-    if (confirm('Are you sure you want to delete this RM Issue record?')) {
-      await deleteRMIssue(id);
+    if (
+      confirm(
+        'Delete this RM Issue? The issued quantity will be RETURNED to raw material stock. Because the original issue may have drawn from several batches, the full amount goes back to the oldest surviving batch of that code.'
+      )
+    ) {
+      const res = await deleteRMIssue(id);
+      if (!res.success) alert('❌ ' + res.error);
       loadData();
     }
   };
 
   const handleDeleteProdLog = async (id: string) => {
-    if (confirm('Are you sure you want to delete this Production Log?')) {
-      await deleteProductionLog(id);
+    if (
+      confirm(
+        'Delete this Production Log? Its output will be REMOVED from finished goods stock. If part of the run has already been dispatched, the deletion will be blocked.'
+      )
+    ) {
+      const res = await deleteProductionLog(id);
+      if (!res.success) alert('❌ ' + res.error);
       loadData();
     }
   };
 
   const handleDeletePMIssueItem = async (id: string) => {
-    if (confirm('Are you sure you want to delete this Packaging Issue record?')) {
-      await deletePackagingIssue(id);
+    if (confirm('Delete this Packaging Issue? The issued quantity will be RETURNED to packaging stock.')) {
+      const res = await deletePackagingIssue(id);
+      if (!res.success) alert('❌ ' + res.error);
       loadData();
     }
   };
@@ -221,8 +236,9 @@ export default function Home() {
   };
 
   const handleDeleteDispatchLog = async (id: string) => {
-    if (confirm('Are you sure you want to delete this Dispatch record?')) {
-      await deleteDispatch(id);
+    if (confirm('Delete this Dispatch? The dispatched quantity will be RETURNED to finished goods stock.')) {
+      const res = await deleteDispatch(id);
+      if (!res.success) alert('❌ ' + res.error);
       loadData();
     }
   };
@@ -428,6 +444,13 @@ export default function Home() {
                                 <td className="p-3 text-center">
                                   <div className="flex items-center justify-center gap-2">
                                     <button
+                                      onClick={() => setEditEntry({ type: 'RM_BATCH', record: rm })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit Raw Material Batch"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
                                       onClick={() => handleDeleteRM(rm.id, rm.name)}
                                       className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                       title="Delete Raw Material"
@@ -525,6 +548,13 @@ export default function Home() {
                                 <td className="p-3 text-center">
                                   <div className="flex items-center justify-center gap-2">
                                     <button
+                                      onClick={() => setEditEntry({ type: 'PM', record: pm })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit Packaging Material"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
                                       onClick={() => handleDeletePM(pm.id, pm.name)}
                                       className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
                                       title="Delete Packaging Material"
@@ -602,12 +632,22 @@ export default function Home() {
                                   {new Date(issue.issuedDate).toLocaleDateString()}
                                 </td>
                                 <td className="p-3 text-center">
-                                  <button
-                                    onClick={() => handleDeleteRMIssueItem(issue.id)}
-                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => setEditEntry({ type: 'RM_ISSUE', record: issue })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit RM Issue"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteRMIssueItem(issue.id)}
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -672,12 +712,22 @@ export default function Home() {
                                 <td className="p-3">{log.operator}</td>
                                 <td className="p-3 text-slate-400">{new Date(log.createdAt).toLocaleString()}</td>
                                 <td className="p-3 text-center">
-                                  <button
-                                    onClick={() => handleDeleteProdLog(log.id)}
-                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => setEditEntry({ type: 'PRODUCTION', record: log })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit Production Log"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteProdLog(log.id)}
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -740,12 +790,22 @@ export default function Home() {
                                 <td className="p-3 text-right font-bold text-purple-400">{issue.issuedQty}</td>
                                 <td className="p-3 text-slate-400">{new Date(issue.issuedDate).toLocaleDateString()}</td>
                                 <td className="p-3 text-center">
-                                  <button
-                                    onClick={() => handleDeletePMIssueItem(issue.id)}
-                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => setEditEntry({ type: 'PM_ISSUE', record: issue })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit Packaging Issue"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeletePMIssueItem(issue.id)}
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -819,6 +879,13 @@ export default function Home() {
                                 <td className="p-3">{fg.location || '—'}</td>
                                 <td className="p-3 text-center">
                                   <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => setEditEntry({ type: 'FG', record: fg })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit Finished Good"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
                                     <button
                                       onClick={() => handleDeleteFG(fg.id, fg.name)}
                                       className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
@@ -901,12 +968,22 @@ export default function Home() {
                                   </span>
                                 </td>
                                 <td className="p-3 text-center">
-                                  <button
-                                    onClick={() => handleDeleteDispatchLog(disp.id)}
-                                    className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => setEditEntry({ type: 'DISPATCH', record: disp })}
+                                      className="p-1.5 rounded text-slate-300 hover:bg-[#1E2F4A] hover:text-white transition-all cursor-pointer"
+                                      title="Edit Dispatch"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteDispatchLog(disp.id)}
+                                      className="p-1.5 rounded text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -1544,6 +1621,14 @@ export default function Home() {
         onClose={() => setModalUser(false)}
         roles={rolesList}
         permissions={permissionsList}
+        onSuccess={loadData}
+      />
+
+      <EditEntryModal
+        isOpen={editEntry !== null}
+        type={editEntry?.type ?? 'RM_BATCH'}
+        record={editEntry?.record ?? null}
+        onClose={() => setEditEntry(null)}
         onSuccess={loadData}
       />
 
