@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { X, Box } from 'lucide-react';
 import { createPackagingIssue } from '@/actions/operations';
 
+// The unit follows the selected packaging material; an operator can override it if
+// the material has been re-measured since it was catalogued.
+const PM_UNIT_OPTIONS = ['Units', 'Boxes', 'Rolls', 'KG', 'GM'];
+
 interface PackagingIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -79,6 +83,7 @@ export default function PackagingIssueModal({
       issueFor: formData.issueFor,
       quantityInBatch: selectedPm ? selectedPm.stock : 100,
       issuedQty: qtyNum,
+      unit: formData.unit,
       issuedBy: formData.issuedBy,
       remarks: formData.remarks,
     });
@@ -204,15 +209,24 @@ export default function PackagingIssueModal({
                   type="number"
                   min="0"
                   step="any"
-                  className="w-full text-xs sm:text-sm p-2.5 pr-16 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none font-bold text-purple-400 transition-all"
+                  className="w-full text-xs sm:text-sm p-2.5 pr-24 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none font-bold text-purple-400 transition-all"
                   placeholder="e.g. 500"
                   value={formData.issuedQty}
                   onChange={(e) => handleIssuedQtyChange(e.target.value)}
                   required
                 />
-                <div className="absolute right-1 top-1 bottom-1 px-2.5 bg-[#1E2F4A] rounded-md text-xs font-mono text-slate-300 flex items-center justify-center pointer-events-none shrink-0">
-                  {formData.unit || 'Units'}
-                </div>
+                <select
+                  className="absolute right-1 top-1 bottom-1 px-2 bg-[#1E2F4A] rounded-md text-xs font-mono text-slate-200 border-0 outline-none cursor-pointer focus:ring-2 focus:ring-purple-500 shrink-0"
+                  value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  title="Defaults to the packaging material's own unit — change it if the material has been re-measured"
+                >
+                  {Array.from(new Set([formData.unit, ...PM_UNIT_OPTIONS].filter(Boolean))).map((u) => (
+                    <option key={u} value={u} className="bg-[#162440] text-white">
+                      {u}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

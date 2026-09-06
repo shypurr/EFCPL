@@ -48,6 +48,11 @@ async function main() {
     // Master Add Materials Section
     { key: 'master:add_materials:access', label: 'Access Add Materials Hub', module: 'Add Materials', action: 'create' },
 
+    // Lab Tests
+    { key: 'lab:coa:view', label: 'View COA Certificates', module: 'Lab Tests', action: 'view' },
+    { key: 'lab:coa:create', label: 'Upload COA Certificate', module: 'Lab Tests', action: 'create' },
+    { key: 'lab:coa:delete', label: 'Delete COA Certificate', module: 'Lab Tests', action: 'delete' },
+
     // Admin Governance
     { key: 'admin:roles:manage', label: 'Manage Discord Roles & Permissions', module: 'Administration', action: 'edit' },
     { key: 'admin:users:manage', label: 'Manage Staff Users', module: 'Administration', action: 'edit' },
@@ -86,6 +91,28 @@ async function main() {
       isSystemAdmin: false,
     },
   });
+
+  const labTesterRole = await prisma.role.upsert({
+    where: { name: 'Lab Tester' },
+    update: {},
+    create: {
+      name: 'Lab Tester',
+      colorTag: '#A855F7',
+      description: 'Runs product testing and uploads batch-wise Certificates of Analysis',
+    },
+  });
+
+  // Lab Testers get the COA permissions plus read access to finished goods
+  for (const key of ['lab:coa:view', 'lab:coa:create', 'lab:coa:delete', 'operations:fg:view']) {
+    if (!createdPermsMap[key]) continue;
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: { roleId: labTesterRole.id, permissionId: createdPermsMap[key] },
+      },
+      update: {},
+      create: { roleId: labTesterRole.id, permissionId: createdPermsMap[key] },
+    });
+  }
 
   const productionSupervisorRole = await prisma.role.upsert({
     where: { name: 'Production Supervisor' },

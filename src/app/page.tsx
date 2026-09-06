@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 import Topbar from '@/components/Topbar';
 import MasterCatalogPanel from '@/components/MasterCatalogPanel';
+import CoaPanel from '@/components/CoaPanel';
 
 // Actions
 import { getRawMaterials, getRawMaterialMasters, deleteRawMaterial } from '@/actions/inventory';
@@ -23,6 +24,7 @@ import {
 } from '@/actions/operations';
 import { getPurchaseOrderSuggestions } from '@/actions/po-suggestions';
 import { getReportsData } from '@/actions/reports';
+import { getCoaLinksByBatch } from '@/actions/coa';
 import { getCurrentUser, logoutUser, getUsers, deleteUser } from '@/actions/auth';
 import { getRoles, getPermissions, deleteRole } from '@/actions/roles';
 
@@ -62,6 +64,8 @@ import {
   Layers,
   ArrowDownRight,
   X,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 
 export default function Home() {
@@ -86,6 +90,8 @@ export default function Home() {
   const [dispatches, setDispatches] = useState<any[]>([]);
   const [poSuggestions, setPoSuggestions] = useState<any[]>([]);
   const [reportsData, setReportsData] = useState<any>(null);
+  // batchNumber -> uploaded COA certificate, for the dispatch table link
+  const [coaByBatch, setCoaByBatch] = useState<Record<string, { id: string; fileName: string }>>({});
 
   // Search filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,6 +154,7 @@ export default function Home() {
         getDispatches(searchQuery),
         getPurchaseOrderSuggestions(),
         getReportsData(),
+        getCoaLinksByBatch(),
       ]);
 
       if (userRes && userRes.data) setCurrentUser(userRes.data);
@@ -963,9 +970,26 @@ export default function Home() {
                                 <td className="p-3">{new Date(disp.expiryDate).toISOString().split('T')[0]}</td>
                                 <td className="p-3">{disp.location || '—'}</td>
                                 <td className="p-3">
-                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                    {disp.coaStatus}
-                                  </span>
+                                  {coaByBatch[disp.batchCode] ? (
+                                    <a
+                                      href={`/api/coa/${coaByBatch[disp.batchCode].id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title={`Open ${coaByBatch[disp.batchCode].fileName}`}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 hover:text-emerald-300 transition-all"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      View COA
+                                      <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  ) : (
+                                    <span
+                                      title="No certificate uploaded for this batch yet"
+                                      className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                                    >
+                                      Awaiting COA
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="p-3 text-center">
                                   <div className="flex items-center justify-center gap-2">
@@ -998,6 +1022,10 @@ export default function Home() {
               {/* ======================================================== */}
               {/* 8. MASTER ENTRY HUB: ADD MATERIALS / ITEMS */}
               {/* ======================================================== */}
+              {activePanel === 'lab-coa' && (
+                <CoaPanel currentUserName={currentUser?.name} onChanged={loadData} />
+              )}
+
               {activePanel === 'add-materials' && (
                 <MasterCatalogPanel
                   rawMaterialMasters={rawMaterialMasters}

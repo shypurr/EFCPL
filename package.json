@@ -8,10 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:import-catalog": "npx tsx prisma/import-catalog.ts"
-  },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
+    "db:import-catalog": "npx tsx prisma/import-catalog.ts",
+    "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.9.1",

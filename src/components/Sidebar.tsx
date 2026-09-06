@@ -16,6 +16,7 @@ import {
   ClipboardList,
   ShoppingCart,
   Boxes,
+  FlaskConical,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -40,6 +41,9 @@ export default function Sidebar({ activePanel, setActivePanel, alertCount }: Sid
     { id: 'op-packaging-issue', label: 'Packaging Issue', icon: Box },
     { id: 'op-finished-goods', label: 'Finished Goods', icon: PackageCheck },
     { id: 'op-dispatch', label: 'Dispatch', icon: Truck },
+
+    { section: 'Lab Tests' },
+    { id: 'lab-coa', label: 'COA Certificates', icon: FlaskConical },
 
     { section: 'Master Entry Hub' },
     { id: 'add-materials', label: 'Add Materials / Items', icon: PlusCircle },

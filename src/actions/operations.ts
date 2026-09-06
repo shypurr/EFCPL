@@ -404,6 +404,7 @@ export async function createPackagingIssue(data: {
   issueFor: string;
   quantityInBatch: number;
   issuedQty: number;
+  unit?: string;
   remarks?: string;
   issuedBy?: string;
 }) {
@@ -448,6 +449,7 @@ export async function createPackagingIssue(data: {
           issueFor: data.issueFor.trim(),
           quantityInBatch: pm.stock,
           issuedQty,
+          unit: data.unit?.trim() || pm.unit,
           remarks: data.remarks?.trim() || null,
           issuedBy: data.issuedBy || 'Store Manager',
         },

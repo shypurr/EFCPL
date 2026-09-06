@@ -148,6 +148,7 @@ model PackagingIssue {
   issueFor          String             // FG Target Name
   quantityInBatch   Float              @default(0)
   issuedQty         Float
+  unit              String             @default("Units") // Defaults to the PM's own unit
   issuedDate        DateTime           @default(now())
   remarks           String?
   issuedBy          String             @default("Store Manager")
@@ -273,4 +274,30 @@ model AuditLog {
 
   @@index([userId])
   @@index([timestamp])
+}
+
+// ==========================================
+// 5. LAB TESTS — CERTIFICATE OF ANALYSIS (COA)
+// ==========================================
+
+// A COA is issued per PRODUCED BATCH, between production and packaging. Lab testers
+// upload the signed certificate against an FG batch number; the dispatch log then
+// links to it automatically for any shipment carrying that batch code.
+// The file itself lives in the database so it survives redeploys on ephemeral hosts.
+model CoaCertificate {
+  id          String   @id @default(cuid())
+  fgSku       String
+  batchNumber String   // Matches FinishedGood.batchNumber / Dispatch.batchCode
+  fileName    String
+  mimeType    String
+  fileSize    Int
+  data        Bytes
+  testedBy    String?
+  remarks     String?
+  uploadedBy  String   @default("Lab Tester")
+  uploadedAt  DateTime @default(now())
+
+  @@index([batchNumber])
+  @@index([fgSku])
+  @@index([uploadedAt])
 }

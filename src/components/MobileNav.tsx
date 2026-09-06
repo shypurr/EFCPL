@@ -16,6 +16,7 @@ import {
   Users,
   ClipboardList,
   ShoppingCart,
+  FlaskConical,
   Menu,
   X,
   LogIn,
@@ -65,6 +66,7 @@ export default function MobileNav({
     { id: 'op-dispatch', label: 'Dispatch', icon: Truck },
     
     // Add Hub & Admin
+    { id: 'lab-coa', label: 'COA Certificates', icon: FlaskConical },
     { id: 'add-materials', label: 'Add Materials / Product', icon: PlusCircle },
     { id: 'admin-roles', label: 'Discord Roles & Perms', icon: ShieldCheck },
     { id: 'admin-users', label: 'Staff Users Manager', icon: Users },
