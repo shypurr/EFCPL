@@ -240,6 +240,7 @@ export async function createRawMaterial(data: {
   stock?: number;
   batchNumber?: string;
   expiryDate?: string | Date;
+  remarks?: string;
 }) {
   try {
     const codeClean = data.code.trim().toUpperCase();
@@ -266,7 +267,7 @@ export async function createRawMaterial(data: {
         expiryDate: null,
         status: 'Active',
         isMaster: true,
-        remarks: null,
+        remarks: data.remarks?.trim() || null,
       },
     });
 
@@ -289,6 +290,7 @@ export async function inwardRawMaterial(data: {
   supplier?: string;
   location?: string;
   expiryDate?: string | Date;
+  remarks?: string;
 }) {
   try {
     const qty = Number(data.inwardQty);
@@ -331,7 +333,7 @@ export async function inwardRawMaterial(data: {
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : (rmTemplate?.expiryDate || null),
         status,
         isMaster: false,
-        remarks: null,
+        remarks: data.remarks?.trim() || null,
       },
     });
 
@@ -359,6 +361,7 @@ export async function updateRawMaterial(
     location: string;
     expiryDate: string | Date;
     status: string;
+    remarks: string | null;
   }>
 ) {
   try {
@@ -449,6 +452,7 @@ export async function createPackagingMaterial(data: {
   location?: string;
   expiryDate?: string | Date;
   status?: string;
+  remarks?: string;
 }) {
   try {
     const codeClean = data.code.trim().toUpperCase();
@@ -476,7 +480,7 @@ export async function createPackagingMaterial(data: {
         location: data.location?.trim() || null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
         status,
-        remarks: null,
+        remarks: data.remarks?.trim() || null,
       },
     });
 
@@ -498,6 +502,7 @@ export async function inwardPackagingMaterial(data: {
   supplier?: string;
   location?: string;
   expiryDate?: string | Date;
+  remarks?: string;
 }) {
   try {
     const qty = Number(data.inwardQty);
@@ -533,7 +538,7 @@ export async function inwardPackagingMaterial(data: {
         location: data.location === undefined ? pm.location : data.location.trim() || null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : pm.expiryDate,
         status: newStatus,
-        remarks: null,
+        remarks: data.remarks?.trim() || null,
       },
     });
 
@@ -559,6 +564,7 @@ export async function updatePackagingMaterial(
     location: string | null;
     expiryDate: string | Date;
     status: string;
+    remarks: string | null;
   }>
 ) {
   try {

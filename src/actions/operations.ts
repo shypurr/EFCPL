@@ -137,7 +137,7 @@ export async function createRMIssue(data: {
           expiryDate: batches[0].expiryDate,
           quantityInBatch: available,
           issuedStock: issuedQty,
-          remarks: null,
+          remarks: data.remarks?.trim() || null,
           issuedBy: data.issuedBy || 'Store Manager',
         },
       });
@@ -256,7 +256,7 @@ export async function createProductionLog(data: {
           wastage: data.wastage ? Number(data.wastage) : 0,
           mfgDate: mfg,
           expiryDate: exp,
-          remarks: null,
+          remarks: data.remarks?.trim() || null,
           operator: data.operator || 'Production Supervisor',
         },
       });
@@ -448,7 +448,7 @@ export async function createPackagingIssue(data: {
           issueFor: data.issueFor.trim(),
           quantityInBatch: pm.stock,
           issuedQty,
-          remarks: null,
+          remarks: data.remarks?.trim() || null,
           issuedBy: data.issuedBy || 'Store Manager',
         },
       });
@@ -535,6 +535,7 @@ export async function createFinishedGood(data: {
   expiryDate?: string | Date | null;
   location?: string;
   status?: string;
+  remarks?: string;
 }) {
   try {
     const skuClean = data.sku.trim().toUpperCase();
@@ -560,6 +561,7 @@ export async function createFinishedGood(data: {
         expiryDate: exp,
         shelfLifeDays,
         location: data.location?.trim() || null,
+        remarks: data.remarks?.trim() || null,
         status: data.status || (totalStock > 0 ? 'In Stock' : 'Out of Stock'),
       },
     });
@@ -577,10 +579,12 @@ export async function inwardFinishedGood(data: {
   name?: string;
   batchNumber: string;
   quantityProduced: number;
+  wastage?: number;
   unit?: string;
   mfgDate: string | Date;
   expiryDate: string | Date;
   location?: string;
+  remarks?: string;
 }) {
   try {
     const qty = Number(data.quantityProduced);
@@ -619,6 +623,8 @@ export async function inwardFinishedGood(data: {
         mfgDate: mfg,
         expiryDate: exp,
         shelfLifeDays,
+        wastage: data.wastage !== undefined ? Number(data.wastage) : fg.wastage,
+        remarks: data.remarks?.trim() || null,
         location: data.location === undefined ? fg.location : data.location.trim() || null,
         status: 'In Stock',
       },
@@ -644,6 +650,7 @@ export async function updateFinishedGood(
     expiryDate: string | Date;
     location: string | null;
     status: string;
+    remarks: string | null;
   }>
 ) {
   try {
@@ -798,9 +805,9 @@ export async function createDispatch(data: {
           partyName: data.partyName.trim(),
           mfgDate,
           expiryDate,
-          location: data.location || fg.location,
+          location: data.location === undefined ? fg.location : data.location.trim() || null,
           coaStatus: data.coaStatus || 'Approved',
-          remarks: null,
+          remarks: data.remarks?.trim() || null,
           dispatchedBy: data.dispatchedBy || 'Dispatch Officer',
         },
       });
@@ -861,13 +868,14 @@ export const postDispatch = createDispatch;
 
 export async function updateRMIssue(
   id: string,
-  data: Partial<{ issueFor: string; issuedBy: string; issuedDate: string | Date }>
+  data: Partial<{ issueFor: string; issuedBy: string; issuedDate: string | Date; remarks: string }>
 ) {
   try {
     const updateData: any = {};
     if (data.issueFor !== undefined) updateData.issueFor = data.issueFor.trim();
     if (data.issuedBy !== undefined) updateData.issuedBy = data.issuedBy.trim() || 'Store Manager';
     if (data.issuedDate) updateData.issuedDate = new Date(data.issuedDate);
+    if (data.remarks !== undefined) updateData.remarks = data.remarks.trim() || null;
 
     const updated = await prisma.rMIssue.update({ where: { id }, data: updateData });
     revalidatePath('/');
@@ -886,6 +894,7 @@ export async function updateProductionLog(
     mfgDate: string | Date;
     expiryDate: string | Date;
     operator: string;
+    remarks: string;
   }>
 ) {
   try {
@@ -904,6 +913,7 @@ export async function updateProductionLog(
     }
     if (data.mfgDate) updateData.mfgDate = new Date(data.mfgDate);
     if (data.expiryDate) updateData.expiryDate = new Date(data.expiryDate);
+    if (data.remarks !== undefined) updateData.remarks = data.remarks.trim() || null;
 
     const updated = await prisma.productionLog.update({ where: { id }, data: updateData });
     revalidatePath('/');
@@ -915,13 +925,14 @@ export async function updateProductionLog(
 
 export async function updatePackagingIssue(
   id: string,
-  data: Partial<{ issueFor: string; issuedBy: string; issuedDate: string | Date }>
+  data: Partial<{ issueFor: string; issuedBy: string; issuedDate: string | Date; remarks: string }>
 ) {
   try {
     const updateData: any = {};
     if (data.issueFor !== undefined) updateData.issueFor = data.issueFor.trim();
     if (data.issuedBy !== undefined) updateData.issuedBy = data.issuedBy.trim() || 'Store Manager';
     if (data.issuedDate) updateData.issuedDate = new Date(data.issuedDate);
+    if (data.remarks !== undefined) updateData.remarks = data.remarks.trim() || null;
 
     const updated = await prisma.packagingIssue.update({ where: { id }, data: updateData });
     revalidatePath('/');
@@ -941,6 +952,7 @@ export async function updateDispatch(
     location: string | null;
     coaStatus: string;
     dispatchedBy: string;
+    remarks: string;
   }>
 ) {
   try {
@@ -952,6 +964,7 @@ export async function updateDispatch(
     if (data.dispatchedBy !== undefined) updateData.dispatchedBy = data.dispatchedBy.trim() || 'Dispatch Officer';
     if (data.dispatchDate) updateData.dispatchDate = new Date(data.dispatchDate);
     if (data.location !== undefined) updateData.location = data.location?.trim() || null;
+    if (data.remarks !== undefined) updateData.remarks = data.remarks.trim() || null;
 
     const updated = await prisma.dispatch.update({ where: { id }, data: updateData });
     revalidatePath('/');

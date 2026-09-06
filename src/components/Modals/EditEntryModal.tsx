@@ -65,6 +65,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'supplier', label: 'Supplier', type: 'text' },
     { key: 'location', label: 'Storage Location', type: 'select', options: RM_LOCATIONS, allowNone: true },
     { key: 'expiryDate', label: 'Expiry Date', type: 'date' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
   PM: [
     { key: 'code', label: 'PM Code', type: 'text', readOnly: true, hint: 'Codes are permanent — packaging issue history references them' },
@@ -78,6 +79,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'supplier', label: 'Supplier', type: 'text' },
     { key: 'location', label: 'Storage Location', type: 'select', options: PM_LOCATIONS, allowNone: true },
     { key: 'expiryDate', label: 'Expiry Date', type: 'date' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
   FG: [
     { key: 'sku', label: 'SKU', type: 'text', readOnly: true, hint: 'SKUs are permanent — production and dispatch history reference them' },
@@ -87,6 +89,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'location', label: 'Storage Location', type: 'select', options: FG_LOCATIONS, allowNone: true },
     { key: 'mfgDate', label: 'MFG Date', type: 'date' },
     { key: 'expiryDate', label: 'Expiry Date', type: 'date', hint: 'Shelf life is recalculated from these two dates' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
   RM_ISSUE: [
     { key: 'rmCode', label: 'RM Code', type: 'text', readOnly: true },
@@ -96,6 +99,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'issueFor', label: 'Issue For (Target FG)', type: 'text', required: true, span: 'sm:col-span-2' },
     { key: 'issuedBy', label: 'Issued By', type: 'text' },
     { key: 'issuedDate', label: 'Issued Date', type: 'date' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
   PRODUCTION: [
     { key: 'fgCode', label: 'FG Code', type: 'text', readOnly: true },
@@ -106,6 +110,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'mfgDate', label: 'MFG Date', type: 'date' },
     { key: 'expiryDate', label: 'Expiry Date', type: 'date' },
     { key: 'operator', label: 'Operator', type: 'text', span: 'sm:col-span-2' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
   PM_ISSUE: [
     { key: 'pmCode', label: 'PM Code', type: 'text', readOnly: true },
@@ -114,6 +119,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'issueFor', label: 'Issue For (Target FG)', type: 'text', required: true },
     { key: 'issuedBy', label: 'Issued By', type: 'text' },
     { key: 'issuedDate', label: 'Issued Date', type: 'date' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
   DISPATCH: [
     { key: 'skuCode', label: 'SKU Code', type: 'text', readOnly: true },
@@ -125,6 +131,7 @@ const FIELDS: Record<EntryType, FieldSpec[]> = {
     { key: 'location', label: 'Location', type: 'select', options: FG_LOCATIONS, allowNone: true },
     { key: 'coaStatus', label: 'CoA Status', type: 'select', options: COA_STATUS },
     { key: 'dispatchedBy', label: 'Dispatched By', type: 'text', span: 'sm:col-span-2' },
+    { key: 'remarks', label: 'Remarks', type: 'text', placeholder: 'Optional note', span: 'sm:col-span-2' },
   ],
 };
 
@@ -213,6 +220,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
         unit: form.unit,
         supplier: form.supplier.trim(),
         location: form.location,
+        remarks: form.remarks,
         ...(form.expiryDate ? { expiryDate: form.expiryDate } : {}),
       } as any);
     } else if (type === 'PM') {
@@ -226,6 +234,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
         maxStock: numOrNull(form.maxStock) as number,
         supplier: form.supplier,
         location: form.location,
+        remarks: form.remarks,
         ...(form.expiryDate ? { expiryDate: form.expiryDate } : {}),
       } as any);
     } else if (type === 'FG') {
@@ -234,6 +243,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
         batchNumber: form.batchNumber.trim(),
         unit: form.unit,
         location: form.location,
+        remarks: form.remarks,
         ...(form.mfgDate ? { mfgDate: form.mfgDate } : {}),
         ...(form.expiryDate ? { expiryDate: form.expiryDate } : {}),
       });
@@ -241,6 +251,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
       res = await updateRMIssue(recordId, {
         issueFor: form.issueFor,
         issuedBy: form.issuedBy,
+        remarks: form.remarks,
         ...(form.issuedDate ? { issuedDate: form.issuedDate } : {}),
       });
     } else if (type === 'PRODUCTION') {
@@ -249,6 +260,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
         totalBatchesMade: num(form.totalBatchesMade),
         wastage: num(form.wastage),
         operator: form.operator,
+        remarks: form.remarks,
         ...(form.mfgDate ? { mfgDate: form.mfgDate } : {}),
         ...(form.expiryDate ? { expiryDate: form.expiryDate } : {}),
       });
@@ -256,6 +268,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
       res = await updatePackagingIssue(recordId, {
         issueFor: form.issueFor,
         issuedBy: form.issuedBy,
+        remarks: form.remarks,
         ...(form.issuedDate ? { issuedDate: form.issuedDate } : {}),
       });
     } else {
@@ -265,6 +278,7 @@ export default function EditEntryModal({ isOpen, type, record, onClose, onSucces
         partyName: form.partyName,
         coaStatus: form.coaStatus,
         dispatchedBy: form.dispatchedBy,
+        remarks: form.remarks,
         location: form.location,
         ...(form.dispatchDate ? { dispatchDate: form.dispatchDate } : {}),
       });

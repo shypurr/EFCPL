@@ -7,11 +7,23 @@ import { postDispatch } from '@/actions/finished-goods';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  finishedGoods: any[];
+  finishedGoods?: any[];
+  locations?: { id: string; name: string }[];
   onSuccess: () => void;
 }
 
-export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onSuccess }: ModalProps) {
+export default function DispatchModal({
+  isOpen,
+  onClose,
+  finishedGoods = [],
+  locations = [
+    { id: 'Cold Store Zone A', name: 'Cold Store Zone A' },
+    { id: 'Deep Freezer 2', name: 'Deep Freezer 2' },
+    { id: 'FG Bay 1', name: 'FG Bay 1' },
+    { id: 'Dry Warehouse', name: 'Dry Warehouse' },
+  ],
+  onSuccess,
+}: ModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     skuCode: '',
@@ -21,16 +33,15 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
     unit: 'KG',
     dispatchDate: new Date().toISOString().split('T')[0],
     partyName: '',
+    mfgDate: '',
+    expiryDate: '',
     location: '',
-    coaStatus: 'Approved',
-    dispatchedBy: 'Dispatch Officer',
+    remarks: '',
   });
 
   if (!isOpen) return null;
 
-  const availableGoods = (finishedGoods || []).filter((f) => (f.totalStock !== undefined ? f.totalStock : (f.quantityProduced - (f.qtyDispatched || 0))) > 0);
-  const selectedFg = (finishedGoods || []).find((f) => f.sku === formData.skuCode);
-  const freeStock = selectedFg ? (selectedFg.totalStock !== undefined ? selectedFg.totalStock : (selectedFg.quantityProduced - (selectedFg.qtyDispatched || 0))) : 0;
+  const selectedFg = finishedGoods.find((f) => f.sku === formData.skuCode);
 
   const handleSkuSelect = (selectedSku: string) => {
     const item = finishedGoods.find((f) => f.sku === selectedSku);
@@ -39,16 +50,18 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
         ...formData,
         skuCode: item.sku,
         productName: item.name,
-        batchCode: item.batchNumber || `BATCH-${Date.now().toString().slice(-4)}`,
+        batchCode: item.batchNumber || '',
         unit: item.unit || 'KG',
-        location: item.location || 'FG Store A',
+        location: item.location || '',
+        mfgDate: item.mfgDate ? new Date(item.mfgDate).toISOString().split('T')[0] : '',
+        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
       });
     } else {
       setFormData({ ...formData, skuCode: selectedSku });
     }
   };
 
-  const handleDispatchQtyChange = (val: string) => {
+  const handleQtyChange = (val: string) => {
     if (val === '') {
       setFormData({ ...formData, dispatchQty: '' });
       return;
@@ -61,15 +74,16 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const qtyNum = Number(formData.dispatchQty);
-    if (!formData.skuCode || formData.dispatchQty === '' || qtyNum <= 0 || !formData.partyName) {
-      alert('Please select FG SKU, enter a valid Dispatch Qty (> 0), and Party / Customer Name');
+    if (!formData.skuCode || formData.dispatchQty === '' || qtyNum <= 0 || !formData.partyName.trim()) {
+      alert('Please select an FG SKU, enter a valid Dispatch Quantity (> 0), and a Party Name');
       return;
     }
 
-    if (selectedFg && qtyNum > freeStock) {
-      if (!confirm(`⚠️ Warning: Dispatch Qty (${qtyNum}) exceeds current available stock (${freeStock} ${selectedFg.unit}). Proceed anyway?`)) {
-        return;
-      }
+    if (selectedFg && qtyNum > selectedFg.totalStock) {
+      alert(
+        `❌ Cannot dispatch ${qtyNum} ${formData.unit} — only ${selectedFg.totalStock} ${selectedFg.unit} in stock.`
+      );
+      return;
     }
 
     setLoading(true);
@@ -80,16 +94,15 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
       dispatchQty: qtyNum,
       dispatchDate: formData.dispatchDate,
       partyName: formData.partyName,
-      mfgDate: selectedFg ? selectedFg.mfgDate : new Date(),
-      expiryDate: selectedFg ? selectedFg.expiryDate : new Date(),
-      location: formData.location || (selectedFg ? selectedFg.location : 'FG Store A'),
-      coaStatus: formData.coaStatus,
-      dispatchedBy: formData.dispatchedBy,
+      mfgDate: formData.mfgDate,
+      expiryDate: formData.expiryDate,
+      location: formData.location,
+      remarks: formData.remarks,
     });
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ Dispatch of ${formData.dispatchQty} ${formData.unit} for "${formData.partyName}" posted successfully!`);
+      alert(`✅ Dispatch of ${formData.dispatchQty} ${formData.unit} to "${formData.partyName}" posted successfully!`);
       setFormData({
         skuCode: '',
         productName: '',
@@ -98,9 +111,10 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
         unit: 'KG',
         dispatchDate: new Date().toISOString().split('T')[0],
         partyName: '',
+        mfgDate: '',
+        expiryDate: '',
         location: '',
-        coaStatus: 'Approved',
-        dispatchedBy: 'Dispatch Officer',
+        remarks: '',
       });
       onSuccess();
       onClose();
@@ -119,9 +133,7 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
               <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
-                Post Customer Dispatch
-              </h3>
+              <h3 className="text-sm sm:text-base font-bold text-white leading-tight">Post Customer Dispatch</h3>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
                 Ship finished food products to B2B distributors and retail chains
               </p>
@@ -138,7 +150,7 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* SKU Dropdown */}
+            {/* FG SKU */}
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Select FG SKU *</label>
               <select
@@ -147,10 +159,10 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
                 onChange={(e) => handleSkuSelect(e.target.value)}
                 required
               >
-                <option value="" className="bg-[#162440] text-slate-400">-- Choose SKU --</option>
-                {availableGoods.map((fg) => (
+                <option value="" className="bg-[#162440] text-slate-400">-- Choose FG SKU --</option>
+                {finishedGoods.map((fg) => (
                   <option key={fg.id} value={fg.sku} className="bg-[#162440] text-white">
-                    {fg.sku} — {fg.name} ({fg.totalStock !== undefined ? fg.totalStock : (fg.quantityProduced - (fg.qtyDispatched || 0))} {fg.unit})
+                    {fg.sku} — {fg.name} ({fg.totalStock} {fg.unit})
                   </option>
                 ))}
               </select>
@@ -161,7 +173,7 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
               <label className="text-xs font-semibold text-slate-300 block mb-1">Product Name *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="Product name"
+                placeholder="Select SKU above to auto-fill"
                 value={formData.productName}
                 onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
                 required
@@ -169,21 +181,21 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
             </div>
           </div>
 
-          {/* Current Stock Banner */}
+          {/* Available Stock Banner */}
           {selectedFg && (
             <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-3 text-xs sm:text-sm text-indigo-300 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
               <div>
                 <span>Available Finished Stock: </span>
-                <strong className="text-white font-mono">{freeStock} {selectedFg.unit}</strong>
+                <strong className="text-white font-mono">
+                  {selectedFg.totalStock} {selectedFg.unit}
+                </strong>
               </div>
-              <div className="font-mono text-indigo-400 text-xs">
-                Batch: {selectedFg.batchNumber || '—'}
-              </div>
+              <div className="font-mono text-indigo-400 text-xs">Batch: {selectedFg.batchNumber || '—'}</div>
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Dispatch Qty with Integrated Unit Badge (non-negative) */}
+            {/* Dispatch Qty with unit badge */}
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Dispatch Quantity *</label>
               <div className="relative flex items-center">
@@ -191,10 +203,10 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
                   type="number"
                   min="0"
                   step="any"
-                  className="w-full text-xs sm:text-sm p-2.5 pr-16 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-indigo-400 transition-all"
+                  className="w-full text-xs sm:text-sm p-2.5 pr-16 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-indigo-300 transition-all"
                   placeholder="e.g. 100"
                   value={formData.dispatchQty}
-                  onChange={(e) => handleDispatchQtyChange(e.target.value)}
+                  onChange={(e) => handleQtyChange(e.target.value)}
                   required
                 />
                 <div className="absolute right-1 top-1 bottom-1 px-2.5 bg-[#1E2F4A] rounded-md text-xs font-mono text-slate-300 flex items-center justify-center pointer-events-none shrink-0">
@@ -222,7 +234,7 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
               <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Code</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none font-mono transition-all"
-                placeholder="Batch code"
+                placeholder="Select SKU above to auto-fill"
                 value={formData.batchCode}
                 onChange={(e) => setFormData({ ...formData, batchCode: e.target.value })}
               />
@@ -241,40 +253,56 @@ export default function DispatchModal({ isOpen, onClose, finishedGoods = [], onS
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Location */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* MFG Date */}
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Dispatched From Location</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">MFG Date</label>
               <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                placeholder="Cold Storage Zone A"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                type="date"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                value={formData.mfgDate}
+                onChange={(e) => setFormData({ ...formData, mfgDate: e.target.value })}
               />
             </div>
 
-            {/* CoA Quality Status */}
+            {/* Expiry Date */}
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">CoA Status</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
+              <input
+                type="date"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                value={formData.expiryDate}
+                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+              />
+            </div>
+
+            {/* Storage Location */}
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
               <select
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={formData.coaStatus}
-                onChange={(e) => setFormData({ ...formData, coaStatus: e.target.value })}
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               >
-                <option value="Approved" className="bg-[#162440] text-white">Approved / Released</option>
-                <option value="Pending" className="bg-[#162440] text-white">Pending Inspection</option>
-                <option value="Under Review" className="bg-[#162440] text-white">Under Review</option>
+                <option value="" className="bg-[#162440] text-slate-400">None</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
+                    {loc.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
+          {/* Remarks — optional free-text note */}
           <div className="min-w-0">
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Dispatched By</label>
-            <input
-              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              placeholder="Officer name"
-              value={formData.dispatchedBy}
-              onChange={(e) => setFormData({ ...formData, dispatchedBy: e.target.value })}
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
+            <textarea
+              rows={2}
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-y"
+              placeholder="Optional note about this shipment"
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
             />
           </div>
 

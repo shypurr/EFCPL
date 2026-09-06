@@ -172,6 +172,8 @@ model FinishedGood {
   mfgDate          DateTime?
   expiryDate       DateTime?
   shelfLifeDays    Int?       // Auto-calculated: Expiry - MFG in days
+  wastage          Float      @default(0) // Scrap recorded on the latest packing run
+  remarks          String?
   location         String?
   status           String     @default("In Stock")
   isArchived       Boolean    @default(false) // Soft-deleted: hidden from lists & blocked for new entries, history retained

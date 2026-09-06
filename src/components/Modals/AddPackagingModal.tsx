@@ -38,6 +38,7 @@ export default function AddPackagingModal({
     maxStock: '',
     supplier: '',
     location: '',
+    remarks: '',
   });
 
   if (!isOpen) return null;
@@ -73,6 +74,7 @@ export default function AddPackagingModal({
       maxStock: formData.maxStock ? Number(formData.maxStock) : undefined,
       supplier: formData.supplier.trim() || undefined,
       location: formData.location.trim() || undefined,
+      remarks: formData.remarks,
     });
     setLoading(false);
 
@@ -87,6 +89,7 @@ export default function AddPackagingModal({
         maxStock: '',
         supplier: '',
         location: '',
+        remarks: '',
       });
       onSuccess();
       onClose();
@@ -222,6 +225,18 @@ export default function AddPackagingModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Remarks — optional free-text note */}
+          <div className="min-w-0">
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
+            <textarea
+              rows={2}
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-y"
+              placeholder="Optional note about this entry"
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+            />
           </div>
 
           {/* Action Buttons */}

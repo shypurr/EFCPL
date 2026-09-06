@@ -30,10 +30,12 @@ export default function InwardFinishedGoodModal({
     name: '',
     batchNumber: '',
     quantityProduced: '',
+    wastage: '0',
     unit: 'KG',
     mfgDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
     location: '',
+    remarks: '',
   });
 
   if (!isOpen) return null;
@@ -57,14 +59,14 @@ export default function InwardFinishedGoodModal({
     }
   };
 
-  const handleQtyChange = (val: string) => {
+  const handleNumChange = (field: 'quantityProduced' | 'wastage', val: string) => {
     if (val === '') {
-      setFormData({ ...formData, quantityProduced: '' });
+      setFormData({ ...formData, [field]: '' });
       return;
     }
-    const num = Number(val);
-    if (num < 0 || isNaN(num)) return;
-    setFormData({ ...formData, quantityProduced: val });
+    const n = Number(val);
+    if (n < 0 || isNaN(n)) return;
+    setFormData({ ...formData, [field]: val });
   };
 
   const mfgTime = formData.mfgDate ? new Date(formData.mfgDate).getTime() : 0;
@@ -86,10 +88,12 @@ export default function InwardFinishedGoodModal({
       name: formData.name,
       batchNumber: formData.batchNumber,
       quantityProduced: qtyNum,
+      wastage: Math.max(0, Number(formData.wastage) || 0),
       unit: formData.unit,
       mfgDate: mfg,
       expiryDate: formData.expiryDate,
       location: formData.location,
+      remarks: formData.remarks,
     });
     setLoading(false);
 
@@ -100,10 +104,12 @@ export default function InwardFinishedGoodModal({
         name: '',
         batchNumber: '',
         quantityProduced: '',
+        wastage: '0',
         unit: 'KG',
         mfgDate: new Date().toISOString().split('T')[0],
         expiryDate: '',
         location: '',
+        remarks: '',
       });
       onSuccess();
       onClose();
@@ -188,7 +194,7 @@ export default function InwardFinishedGoodModal({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number *</label>
               <input
@@ -201,7 +207,7 @@ export default function InwardFinishedGoodModal({
             </div>
 
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Quantity Produced *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Quantity Packed *</label>
               <input
                 type="number"
                 min="0"
@@ -209,8 +215,21 @@ export default function InwardFinishedGoodModal({
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-emerald-400 transition-all"
                 placeholder="e.g. 1000"
                 value={formData.quantityProduced}
-                onChange={(e) => handleQtyChange(e.target.value)}
+                onChange={(e) => handleNumChange('quantityProduced', e.target.value)}
                 required
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Wastage / Scrap Qty</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-red-400 transition-all"
+                placeholder="0"
+                value={formData.wastage}
+                onChange={(e) => handleNumChange('wastage', e.target.value)}
               />
             </div>
 
@@ -269,6 +288,18 @@ export default function InwardFinishedGoodModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Remarks — optional free-text note */}
+          <div className="min-w-0">
+            <label className="text-xs font-semibold text-slate-300 block mb-1">Remarks</label>
+            <textarea
+              rows={2}
+              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-y"
+              placeholder="Optional note about this batch"
+              value={formData.remarks}
+              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+            />
           </div>
 
           {/* Action Buttons */}
