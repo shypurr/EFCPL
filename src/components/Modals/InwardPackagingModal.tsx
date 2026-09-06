@@ -8,6 +8,7 @@ interface InwardPackagingModalProps {
   isOpen: boolean;
   onClose: () => void;
   packagingMaterials: any[];
+  units?: { code: string; label: string }[];
   locations?: { id: string; name: string }[];
   onSuccess: () => void;
 }
@@ -16,6 +17,12 @@ export default function InwardPackagingModal({
   isOpen,
   onClose,
   packagingMaterials = [],
+  units = [
+    { code: 'Units', label: 'Units' },
+    { code: 'Boxes', label: 'Boxes' },
+    { code: 'Rolls', label: 'Rolls' },
+    { code: 'KG', label: 'KG' },
+  ],
   locations = [
     { id: 'PM Warehouse', name: 'PM Warehouse' },
     { id: 'Packaging Bay 1', name: 'Packaging Bay 1' },
@@ -32,16 +39,21 @@ export default function InwardPackagingModal({
     unit: 'Units',
     batchNumber: '',
     supplier: '',
-    location: 'PM Warehouse',
+    location: '',
     expiryDate: '',
   });
 
   if (!isOpen) return null;
 
-  const selectedPm = packagingMaterials.find((p) => p.code === formData.code);
+  // Deduplicate materials by code for clean selection dropdown
+  const materialOptions = Array.from(
+    new Map(packagingMaterials.map((pm) => [pm.code, pm])).values()
+  );
+
+  const selectedPm = materialOptions.find((p) => p.code === formData.code);
 
   const handleCodeSelect = (selectedCode: string) => {
-    const item = packagingMaterials.find((p) => p.code === selectedCode);
+    const item = materialOptions.find((p) => p.code === selectedCode);
     if (item) {
       setFormData({
         ...formData,
@@ -50,7 +62,7 @@ export default function InwardPackagingModal({
         brand: item.brand || '',
         unit: item.unit || 'Units',
         supplier: item.supplier || '',
-        location: item.location || 'PM Warehouse',
+        location: item.location || '',
         expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
       });
     } else {
@@ -91,7 +103,7 @@ export default function InwardPackagingModal({
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ Successfully received ${formData.inwardQty} ${formData.unit} for ${formData.name}!`);
+      alert(`✅ Successfully logged new inward entry of ${formData.inwardQty} ${formData.unit} for ${formData.name}!`);
       setFormData({
         code: '',
         name: '',
@@ -100,7 +112,7 @@ export default function InwardPackagingModal({
         unit: 'Units',
         batchNumber: '',
         supplier: '',
-        location: 'PM Warehouse',
+        location: '',
         expiryDate: '',
       });
       onSuccess();
@@ -121,10 +133,10 @@ export default function InwardPackagingModal({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
-                Log Incoming / Arrived Packaging (PM)
+                Log Incoming / Arrived Packaging Material
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                Receive shipments for jars, bottles, cartons & packaging supplies
+                Receive shipments for jars, bottles, cartons &amp; packaging supplies
               </p>
             </div>
           </div>
@@ -149,8 +161,8 @@ export default function InwardPackagingModal({
                 required
               >
                 <option value="" className="bg-[#162440] text-slate-400">-- Choose PM Code --</option>
-                {packagingMaterials.map((pm) => (
-                  <option key={pm.id} value={pm.code} className="bg-[#162440] text-white">
+                {materialOptions.map((pm) => (
+                  <option key={pm.id || pm.code} value={pm.code} className="bg-[#162440] text-white">
                     {pm.code} — {pm.name}
                   </option>
                 ))}
@@ -171,7 +183,7 @@ export default function InwardPackagingModal({
 
             {/* Brand Name */}
             <div className="min-w-0 sm:col-span-2 md:col-span-1">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name / Type</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 placeholder="Brand name"
@@ -185,7 +197,7 @@ export default function InwardPackagingModal({
           {selectedPm && (
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs sm:text-sm text-blue-300 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
               <div>
-                <span>Current Stock on Record: </span>
+                <span>Latest Stock of {selectedPm.name}: </span>
                 <strong className="text-white font-mono">{selectedPm.stock} {selectedPm.unit}</strong>
                 <span className="text-slate-400 ml-2 text-xs">(Last Batch: {selectedPm.batchNumber || '—'})</span>
               </div>
@@ -196,6 +208,7 @@ export default function InwardPackagingModal({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* Incoming Qty with non-negative constraints */}
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Incoming Qty *</label>
               <input
@@ -210,13 +223,20 @@ export default function InwardPackagingModal({
               />
             </div>
 
+            {/* Changeable Unit Dropdown */}
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-slate-300 font-mono"
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
+              <select
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-medium transition-all"
                 value={formData.unit}
-                readOnly
-              />
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              >
+                {units.map((u) => (
+                  <option key={u.code} value={u.code} className="bg-[#162440] text-white">
+                    {u.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="min-w-0">
@@ -236,7 +256,7 @@ export default function InwardPackagingModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="Supplier name"
+                placeholder="Supplier or vendor"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               />
@@ -245,10 +265,11 @@ export default function InwardPackagingModal({
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
               <select
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               >
+                <option value="" className="bg-[#162440] text-slate-400">None</option>
                 {locations.map((loc) => (
                   <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
                     {loc.name}
@@ -261,7 +282,7 @@ export default function InwardPackagingModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
               <input
                 type="date"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 value={formData.expiryDate}
                 onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
               />

@@ -38,7 +38,7 @@ export default function InwardRawMaterialModal({
     unit: 'KG',
     batchNumber: '',
     supplier: '',
-    location: 'RM Store A',
+    location: '',
     expiryDate: '',
   });
 
@@ -61,7 +61,7 @@ export default function InwardRawMaterialModal({
         brand: item.brand || '',
         unit: item.unit || 'KG',
         supplier: item.supplier || '',
-        location: item.location || 'RM Store A',
+        location: item.location || '',
         expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
       });
     } else {
@@ -111,7 +111,7 @@ export default function InwardRawMaterialModal({
         unit: 'KG',
         batchNumber: '',
         supplier: '',
-        location: 'RM Store A',
+        location: '',
         expiryDate: '',
       });
       onSuccess();
@@ -268,6 +268,7 @@ export default function InwardRawMaterialModal({
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               >
+                <option value="" className="bg-[#162440] text-slate-400">None</option>
                 {locations.map((loc) => (
                   <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
                     {loc.name}

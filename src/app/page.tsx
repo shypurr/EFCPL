@@ -1500,7 +1500,7 @@ export default function Home() {
       <IssueModal
         isOpen={modalRmIssue}
         onClose={() => setModalRmIssue(false)}
-        rawMaterials={rawMaterials}
+        rawMaterials={rawMaterialMasters.length > 0 ? rawMaterialMasters : rawMaterials}
         finishedGoods={finishedGoods}
         onSuccess={loadData}
       />

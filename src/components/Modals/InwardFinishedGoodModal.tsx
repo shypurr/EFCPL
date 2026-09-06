@@ -33,7 +33,7 @@ export default function InwardFinishedGoodModal({
     unit: 'KG',
     mfgDate: new Date().toISOString().split('T')[0],
     expiryDate: '',
-    location: 'Cold Store Zone A',
+    location: '',
   });
 
   if (!isOpen) return null;
@@ -48,7 +48,7 @@ export default function InwardFinishedGoodModal({
         sku: item.sku,
         name: item.name,
         unit: item.unit || 'KG',
-        location: item.location || 'Cold Store Zone A',
+        location: item.location || '',
         mfgDate: item.mfgDate ? new Date(item.mfgDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : '',
       });
@@ -103,7 +103,7 @@ export default function InwardFinishedGoodModal({
         unit: 'KG',
         mfgDate: new Date().toISOString().split('T')[0],
         expiryDate: '',
-        location: 'Cold Store Zone A',
+        location: '',
       });
       onSuccess();
       onClose();
@@ -262,6 +262,7 @@ export default function InwardFinishedGoodModal({
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             >
+              <option value="" className="bg-[#162440] text-slate-400">None</option>
               {locations.map((loc) => (
                 <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
                   {loc.name}

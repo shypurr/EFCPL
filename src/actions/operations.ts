@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { syncRawMaterialStatusByCode } from '@/lib/inventory-utils';
 
 // Helper function to calculate shelf life in days
 function calculateShelfLifeDays(mfgDate: Date | string, expiryDate: Date | string): number {
@@ -80,48 +81,61 @@ export async function createRMIssue(data: {
       return { success: false, error: 'Issued quantity must be greater than zero' };
     }
 
+    const codeClean = data.rmCode.trim().toUpperCase();
+    const batchOverride = data.batchNumber?.trim() || '';
+
     const result = await prisma.$transaction(async (tx) => {
-      const rm = (data.batchNumber
-        ? await tx.rawMaterial.findFirst({
-            where: {
-              code: data.rmCode.trim().toUpperCase(),
-              batchNumber: data.batchNumber.trim(),
-              isArchived: false,
-            },
-            orderBy: { createdAt: 'desc' },
-          })
-        : null) || await tx.rawMaterial.findFirst({
-            where: { code: data.rmCode.trim().toUpperCase(), isArchived: false },
-            orderBy: { createdAt: 'desc' },
-          });
-
-      if (!rm) {
-        throw new Error(`Raw Material "${data.rmCode}" not found or has been deleted.`);
-      }
-
-      if (rm.stock < issuedQty) {
-        throw new Error(`Insufficient stock for ${rm.name}. Current batch stock: ${rm.stock}, requested: ${issuedQty}`);
-      }
-
-      const updatedStock = rm.stock - issuedQty;
-      const newStatus = updatedStock <= rm.reorderLevel ? 'Low Stock' : 'Active';
-
-      await tx.rawMaterial.update({
-        where: { id: rm.id },
-        data: {
-          stock: updatedStock,
-          status: newStatus,
+      // Issuing happens against a MATERIAL, not a single arrival. Candidate batches
+      // are drained oldest-first (FIFO) so the earliest-arriving stock leaves first.
+      // An explicit batch number narrows the pool to that lot only.
+      const batches = await tx.rawMaterial.findMany({
+        where: {
+          code: codeClean,
+          isMaster: false,
+          isArchived: false,
+          stock: { gt: 0 },
+          ...(batchOverride ? { batchNumber: batchOverride } : {}),
         },
+        orderBy: { createdAt: 'asc' },
       });
+
+      if (batches.length === 0) {
+        throw new Error(
+          batchOverride
+            ? `No stock found for "${codeClean}" batch "${batchOverride}".`
+            : `Raw Material "${codeClean}" has no stock available to issue.`
+        );
+      }
+
+      const available = batches.reduce((sum, b) => sum + b.stock, 0);
+      if (available < issuedQty) {
+        throw new Error(
+          `Insufficient stock for ${batches[0].name}. Available: ${available} ${batches[0].unit}, requested: ${issuedQty}`
+        );
+      }
+
+      // Drain oldest first, carrying the remainder into the next batch
+      let remaining = issuedQty;
+      const consumed: string[] = [];
+      for (const batch of batches) {
+        if (remaining <= 0) break;
+        const take = Math.min(batch.stock, remaining);
+        await tx.rawMaterial.update({
+          where: { id: batch.id },
+          data: { stock: batch.stock - take },
+        });
+        consumed.push(batch.batchNumber || '—');
+        remaining -= take;
+      }
 
       const issueLog = await tx.rMIssue.create({
         data: {
-          rmCode: rm.code,
-          materialName: data.materialName || rm.name,
-          batchNumber: data.batchNumber || rm.batchNumber,
+          rmCode: codeClean,
+          materialName: data.materialName || batches[0].name,
+          batchNumber: consumed.join(', '),
           issueFor: data.issueFor.trim(),
-          expiryDate: data.expiryDate ? new Date(data.expiryDate) : rm.expiryDate,
-          quantityInBatch: rm.stock,
+          expiryDate: batches[0].expiryDate,
+          quantityInBatch: available,
           issuedStock: issuedQty,
           remarks: null,
           issuedBy: data.issuedBy || 'Store Manager',
@@ -130,6 +144,9 @@ export async function createRMIssue(data: {
 
       return issueLog;
     });
+
+    // Stock changed, so the material-level status must be recomputed for every row
+    await syncRawMaterialStatusByCode(codeClean);
 
     revalidatePath('/');
     return { success: true, data: result };
@@ -247,7 +264,7 @@ export async function createProductionLog(data: {
             mfgDate: mfg,
             expiryDate: exp,
             shelfLifeDays: shelfLife,
-            location: data.location || 'Cold Store Zone A',
+            location: data.location?.trim() || null,
             status: 'In Stock',
           },
         });
@@ -523,7 +540,7 @@ export async function inwardFinishedGood(data: {
         mfgDate: mfg,
         expiryDate: exp,
         shelfLifeDays,
-        location: data.location ? data.location.trim() : fg.location,
+        location: data.location === undefined ? fg.location : data.location.trim() || null,
         status: 'In Stock',
       },
     });

@@ -326,7 +326,8 @@ export async function inwardRawMaterial(data: {
         reorderLevel: reorderLevel,
         maxStock: rmTemplate?.maxStock || null,
         supplier: data.supplier ? data.supplier.trim() : (rmTemplate?.supplier || null),
-        location: data.location ? data.location.trim() : (rmTemplate?.location || 'RM Store A'),
+        location:
+          data.location === undefined ? (rmTemplate?.location ?? null) : data.location.trim() || null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : (rmTemplate?.expiryDate || null),
         status,
         isMaster: false,
@@ -529,7 +530,7 @@ export async function inwardPackagingMaterial(data: {
         stock: updatedStock,
         unit: data.unit ? data.unit.trim() : pm.unit,
         supplier: data.supplier ? data.supplier.trim() : pm.supplier,
-        location: data.location ? data.location.trim() : pm.location,
+        location: data.location === undefined ? pm.location : data.location.trim() || null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : pm.expiryDate,
         status: newStatus,
         remarks: null,
