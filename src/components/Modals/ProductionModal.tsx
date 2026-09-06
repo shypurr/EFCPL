@@ -223,7 +223,7 @@ export default function ProductionModal({
             </div>
 
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Production Batch No</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Production Batch Code</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono transition-all"
                 placeholder="Auto-generated or custom"

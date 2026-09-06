@@ -85,7 +85,7 @@ export default function InwardPackagingModal({
     e.preventDefault();
     const qtyNum = Number(formData.inwardQty);
     if (!formData.code || formData.inwardQty === '' || qtyNum <= 0 || !formData.batchNumber) {
-      alert('Please select Packaging Material Code, enter a valid Inward Qty (> 0), and Batch Number');
+      alert('Please select Packaging Material Code, enter a valid Inward Qty (> 0), and Batch Code');
       return;
     }
 
@@ -243,7 +243,7 @@ export default function InwardPackagingModal({
             </div>
 
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Arriving Batch No *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Arriving Batch Code *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono transition-all"
                 placeholder="e.g. PB-2026-99"

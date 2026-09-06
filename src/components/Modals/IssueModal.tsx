@@ -239,9 +239,9 @@ export default function IssueModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Batch Number — optional FIFO override */}
+            {/* Batch Code — optional FIFO override */}
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Code</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono transition-all"
                 placeholder="Leave blank to draw oldest first"

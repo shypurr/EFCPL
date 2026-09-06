@@ -77,7 +77,7 @@ export default function InwardFinishedGoodModal({
     e.preventDefault();
     const qtyNum = Number(formData.quantityProduced);
     if (!formData.sku || !formData.batchNumber || formData.quantityProduced === '' || qtyNum <= 0 || !formData.expiryDate) {
-      alert('Please select FG SKU, enter Batch Number, valid Quantity Produced (> 0), and Expiry Date');
+      alert('Please select FG SKU, enter Batch Code, valid Quantity Produced (> 0), and Expiry Date');
       return;
     }
 
@@ -196,7 +196,7 @@ export default function InwardFinishedGoodModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Code *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none font-mono transition-all"
                 placeholder="e.g. FG-2026-880"

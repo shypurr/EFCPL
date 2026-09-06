@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 import Topbar from '@/components/Topbar';
@@ -139,6 +139,7 @@ export default function Home() {
         dispatchRes,
         poRes,
         rptRes,
+        coaRes,
       ] = await Promise.all([
         getCurrentUser(),
         getUsers(),
@@ -171,6 +172,7 @@ export default function Home() {
       if (dispatchRes?.success && dispatchRes.data) setDispatches(dispatchRes.data);
       if (poRes?.success && poRes.data) setPoSuggestions(poRes.data);
       if (rptRes?.success && rptRes.data) setReportsData(rptRes.data);
+      if (coaRes?.success && coaRes.data) setCoaByBatch(coaRes.data);
     } catch (err: any) {
       console.error('Data loading error:', err);
       setDbError(err.message || 'Database connection or initialization error');
@@ -187,6 +189,14 @@ export default function Home() {
   const lowRmCount = rawMaterials.filter((r) => r.stock <= r.reorderLevel).length;
   const lowPmCount = packagedMaterials.filter((p) => p.stock <= p.reorderLevel).length;
   const totalAlertsCount = lowRmCount + lowPmCount;
+
+  // The Finished Goods panel is a PRODUCTION register, not the SKU catalogue.
+  // An SKU only appears once a batch has actually been logged against it — every
+  // registered SKU still lives in Add Materials / Items and in the pickers.
+  const loggedFinishedGoods = useMemo(
+    () => finishedGoods.filter((fg) => (fg.batchNumber || '').trim() !== ''),
+    [finishedGoods]
+  );
 
   // Delete Actions
   const handleDeleteRM = async (id: string, name: string) => {
@@ -318,7 +328,7 @@ export default function Home() {
               <input
                 type="text"
                 className="w-full text-xs sm:text-sm pl-9 pr-8 py-2 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="Search materials, batch numbers, codes, SKUs, or locations..."
+                placeholder="Search materials, batch codes, SKUs, or locations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -396,7 +406,7 @@ export default function Home() {
                             <th className="p-3">Code</th>
                             <th className="p-3">Material Name</th>
                             <th className="p-3">Brand Name</th>
-                            <th className="p-3">Batch No</th>
+                            <th className="p-3">Batch Code</th>
                             <th className="p-3 text-right">Stock</th>
                             <th className="p-3">Unit</th>
                             <th className="p-3 text-right">Reorder Level</th>
@@ -504,7 +514,7 @@ export default function Home() {
                             <th className="p-3">Code</th>
                             <th className="p-3">Material Name</th>
                             <th className="p-3">Brand Name / Type</th>
-                            <th className="p-3">Batch No</th>
+                            <th className="p-3">Batch Code</th>
                             <th className="p-3 text-right">Stock</th>
                             <th className="p-3">Unit</th>
                             <th className="p-3 text-right">Reorder Level</th>
@@ -607,7 +617,7 @@ export default function Home() {
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">RM Code</th>
                             <th className="p-3">Material Name</th>
-                            <th className="p-3">Batch Number</th>
+                            <th className="p-3">Batch Code</th>
                             <th className="p-3">Issue For (FG)</th>
                             <th className="p-3">Expiry Date</th>
                             <th className="p-3 text-right">Qty in Selected Batch</th>
@@ -851,7 +861,7 @@ export default function Home() {
                           <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
                             <th className="p-3">SKU</th>
                             <th className="p-3">Product Name</th>
-                            <th className="p-3">Batch Number</th>
+                            <th className="p-3">Batch Code</th>
                             <th className="p-3 text-right">Quantity Produced</th>
                             <th className="p-3 text-right">Total Stock</th>
                             <th className="p-3">Unit</th>
@@ -863,14 +873,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {finishedGoods.length === 0 ? (
+                          {loggedFinishedGoods.length === 0 ? (
                             <tr>
                               <td colSpan={11} className="p-8 text-center text-slate-500">
-                                No finished goods found in inventory.
+                                No production logged yet. Use &quot;Log FG Batch Stock&quot; to record a produced batch.
                               </td>
                             </tr>
                           ) : (
-                            finishedGoods.map((fg) => (
+                            loggedFinishedGoods.map((fg) => (
                               <tr key={fg.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-blue-400">{fg.sku}</td>
                                 <td className="p-3 font-semibold text-white">{fg.name}</td>
@@ -1277,9 +1287,9 @@ export default function Home() {
                       <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
                         <PackageCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Finished Goods
                       </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{finishedGoods.length}</div>
+                      <div className="text-lg sm:text-xl font-bold text-white">{loggedFinishedGoods.length}</div>
                       <div className="text-[10px] text-emerald-400 font-mono truncate">
-                        {finishedGoods.reduce((acc, f) => acc + (f.totalStock || 0), 0)} Units
+                        {loggedFinishedGoods.reduce((acc, f) => acc + (f.totalStock || 0), 0)} Units
                       </div>
                     </div>
 

@@ -141,7 +141,7 @@ export default function CoaPanel({ currentUserName, onChanged }: Props) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="min-w-0">
-            <label className="text-xs font-semibold text-slate-300 block mb-1">FG Batch Number *</label>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">FG Batch Code *</label>
             <select
               className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-purple-500 outline-none font-mono transition-all"
               value={batchNumber}
@@ -244,7 +244,7 @@ export default function CoaPanel({ currentUserName, onChanged }: Props) {
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="bg-[#162440] text-slate-300 font-semibold border-b border-[#1E2F4A]">
-                <th className="p-3">Batch Number</th>
+                <th className="p-3">Batch Code</th>
                 <th className="p-3">FG SKU</th>
                 <th className="p-3">Certificate</th>
                 <th className="p-3 text-right">Size</th>

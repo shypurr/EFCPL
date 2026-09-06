@@ -84,7 +84,7 @@ export default function InwardRawMaterialModal({
     e.preventDefault();
     const qtyNum = Number(formData.inwardQty);
     if (!formData.code || formData.inwardQty === '' || qtyNum <= 0 || !formData.batchNumber) {
-      alert('Please select Raw Material Code, enter a valid Inward Qty (> 0), and Batch Number');
+      alert('Please select Raw Material Code, enter a valid Inward Qty (> 0), and Batch Code');
       return;
     }
 
@@ -242,7 +242,7 @@ export default function InwardRawMaterialModal({
             </div>
 
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Arriving Batch No *</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Arriving Batch Code *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none font-mono transition-all"
                 placeholder="e.g. B2026-081"
