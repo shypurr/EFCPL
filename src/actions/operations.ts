@@ -463,7 +463,7 @@ export async function createFinishedGood(data: {
         mfgDate: mfg,
         expiryDate: exp,
         shelfLifeDays,
-        location: data.location?.trim() || 'Cold Store Zone A',
+        location: data.location?.trim() || null,
         status: data.status || (totalStock > 0 ? 'In Stock' : 'Out of Stock'),
       },
     });
@@ -546,7 +546,7 @@ export async function updateFinishedGood(
     unit: string;
     mfgDate: string | Date;
     expiryDate: string | Date;
-    location: string;
+    location: string | null;
     status: string;
   }>
 ) {
@@ -554,6 +554,8 @@ export async function updateFinishedGood(
     const updateData: any = { ...data };
     if (data.quantityProduced !== undefined) updateData.quantityProduced = Number(data.quantityProduced);
     if (data.totalStock !== undefined) updateData.totalStock = Number(data.totalStock);
+    // Blank location means "none", not an empty string
+    if (data.location !== undefined) updateData.location = data.location?.trim() || null;
 
     if (data.mfgDate || data.expiryDate) {
       const current = await prisma.finishedGood.findUnique({ where: { id } });

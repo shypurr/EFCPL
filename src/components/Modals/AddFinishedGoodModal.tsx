@@ -17,6 +17,7 @@ export default function AddFinishedGoodModal({
   onClose,
   units = [
     { code: 'KG', label: 'Kilograms (KG)' },
+    { code: 'GM', label: 'Grams (GM)' },
     { code: 'Units', label: 'Units (PCS)' },
     { code: 'Boxes', label: 'Boxes' },
     { code: 'Jars', label: 'Jars' },
@@ -34,7 +35,7 @@ export default function AddFinishedGoodModal({
     sku: '',
     name: '',
     unit: 'KG',
-    location: 'Cold Store Zone A',
+    location: '',
   });
 
   if (!isOpen) return null;
@@ -64,7 +65,7 @@ export default function AddFinishedGoodModal({
         sku: '',
         name: '',
         unit: 'KG',
-        location: 'Cold Store Zone A',
+        location: '',
       });
       onSuccess();
       onClose();
@@ -147,6 +148,7 @@ export default function AddFinishedGoodModal({
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               >
+                <option value="" className="bg-[#162440] text-slate-400">None</option>
                 {locations.map((loc) => (
                   <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
                     {loc.name}

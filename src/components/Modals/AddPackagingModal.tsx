@@ -37,7 +37,7 @@ export default function AddPackagingModal({
     reorderLevel: '',
     maxStock: '',
     supplier: '',
-    location: 'PM Warehouse',
+    location: '',
   });
 
   if (!isOpen) return null;
@@ -86,7 +86,7 @@ export default function AddPackagingModal({
         reorderLevel: '',
         maxStock: '',
         supplier: '',
-        location: 'PM Warehouse',
+        location: '',
       });
       onSuccess();
       onClose();
@@ -202,7 +202,7 @@ export default function AddPackagingModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Default Supplier Name</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="e.g. PackTech Solutions"
+                placeholder="Leave blank for none"
                 value={formData.supplier}
                 onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               />
@@ -214,6 +214,7 @@ export default function AddPackagingModal({
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               >
+                <option value="" className="bg-[#162440] text-slate-400">None</option>
                 {locations.map((loc) => (
                   <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
                     {loc.name}

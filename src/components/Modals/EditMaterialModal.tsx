@@ -15,6 +15,8 @@ interface FieldSpec {
   readOnly?: boolean;
   placeholder?: string;
   options?: string[];
+  /** Adds a "None" choice that clears the field (stored as null) */
+  allowNone?: boolean;
   hint?: string;
   span?: string;
 }
@@ -30,7 +32,7 @@ interface Props {
 
 const RM_UNITS = ['KG', 'Units', 'Boxes', 'GM', 'LTR', 'ML', 'BAGS'];
 const PM_UNITS = ['Units', 'Boxes', 'Rolls', 'KG'];
-const FG_UNITS = ['KG', 'Units', 'Boxes', 'Jars'];
+const FG_UNITS = ['KG', 'GM', 'Units', 'Boxes', 'Jars'];
 
 const RM_LOCATIONS = ['RM Store A', 'Cold Storage 1', 'Dry Warehouse'];
 const PM_LOCATIONS = ['PM Warehouse', 'Packaging Bay 1', 'Dry Storage B'];
@@ -57,7 +59,7 @@ const FIELDS: Record<CatalogType, FieldSpec[]> = {
       placeholder: 'e.g. ABC Agro Pune',
       span: 'sm:col-span-2',
     },
-    { key: 'location', label: 'Default Storage Location', type: 'select', options: RM_LOCATIONS },
+    { key: 'location', label: 'Default Storage Location', type: 'select', options: RM_LOCATIONS, allowNone: true },
   ],
   PM: [
     {
@@ -79,7 +81,7 @@ const FIELDS: Record<CatalogType, FieldSpec[]> = {
       placeholder: 'e.g. Pune Packaging Co',
       span: 'sm:col-span-2',
     },
-    { key: 'location', label: 'Storage Location', type: 'select', options: PM_LOCATIONS },
+    { key: 'location', label: 'Storage Location', type: 'select', options: PM_LOCATIONS, allowNone: true },
   ],
   FG: [
     {
@@ -91,7 +93,7 @@ const FIELDS: Record<CatalogType, FieldSpec[]> = {
     },
     { key: 'name', label: 'Product Name', type: 'text', required: true, placeholder: 'e.g. Mango Pickle 500g' },
     { key: 'unit', label: 'Unit', type: 'select', options: FG_UNITS },
-    { key: 'location', label: 'Storage Location', type: 'select', options: FG_LOCATIONS, span: 'sm:col-span-2' },
+    { key: 'location', label: 'Storage Location', type: 'select', options: FG_LOCATIONS, allowNone: true, span: 'sm:col-span-2' },
   ],
 };
 
@@ -255,6 +257,11 @@ export default function EditMaterialModal({ isOpen, type, record, onClose, onSuc
                     {form[f.key] !== '' && !f.options?.includes(form[f.key]) && (
                       <option value={form[f.key]} className="bg-[#162440] text-white">
                         {form[f.key]}
+                      </option>
+                    )}
+                    {f.allowNone && (
+                      <option value="" className="bg-[#162440] text-slate-400">
+                        None
                       </option>
                     )}
                     {f.options?.map((o) => (

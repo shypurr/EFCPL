@@ -262,7 +262,7 @@ export async function createRawMaterial(data: {
         reorderLevel: Number(data.reorderLevel) || 0,
         maxStock: data.maxStock ? Number(data.maxStock) : null,
         supplier: data.supplier?.trim() || null,
-        location: data.location?.trim() || 'RM Store A',
+        location: data.location?.trim() || null,
         expiryDate: null,
         status: 'Active',
         isMaster: true,
@@ -471,8 +471,8 @@ export async function createPackagingMaterial(data: {
         unit: data.unit?.trim() || 'Units',
         reorderLevel: Number(data.reorderLevel),
         maxStock: data.maxStock ? Number(data.maxStock) : null,
-        supplier: data.supplier?.trim(),
-        location: data.location?.trim() || 'PM Warehouse',
+        supplier: data.supplier?.trim() || null,
+        location: data.location?.trim() || null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
         status,
         remarks: null,
@@ -554,8 +554,8 @@ export async function updatePackagingMaterial(
     unit: string;
     reorderLevel: number;
     maxStock: number;
-    supplier: string;
-    location: string;
+    supplier: string | null;
+    location: string | null;
     expiryDate: string | Date;
     status: string;
   }>
@@ -566,6 +566,9 @@ export async function updatePackagingMaterial(
     if (data.reorderLevel !== undefined) updateData.reorderLevel = Number(data.reorderLevel);
     if (data.maxStock !== undefined) updateData.maxStock = data.maxStock ? Number(data.maxStock) : null;
     if (data.expiryDate) updateData.expiryDate = new Date(data.expiryDate);
+    // Blank supplier / location means "none", not an empty string
+    if (data.supplier !== undefined) updateData.supplier = data.supplier?.trim() || null;
+    if (data.location !== undefined) updateData.location = data.location?.trim() || null;
 
     const updated = await prisma.packagingMaterial.update({
       where: { id },

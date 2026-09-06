@@ -1,0 +1,411 @@
+{
+  "rawMaterials": [
+    {
+      "code": "RM-001",
+      "name": "Potato",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-002",
+      "name": "Onion",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-003",
+      "name": "Tomato",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-004",
+      "name": "Ginger",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-005",
+      "name": "Garlic",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-006",
+      "name": "Green Chili",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-007",
+      "name": "Kothimbir",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-008",
+      "name": "Pudhina",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-009",
+      "name": "Green Peas",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-010",
+      "name": "Sweet Corn",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-011",
+      "name": "Cauliflower",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-012",
+      "name": "Carrot",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-013",
+      "name": "Beetroot",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-014",
+      "name": "Alu Patta",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-015",
+      "name": "Hari Methi",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-016",
+      "name": "Cabbage",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-017",
+      "name": "Capsicum",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-018",
+      "name": "Spring Onion",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-019",
+      "name": "Fresh Coconut",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-020",
+      "name": "Besan",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-021",
+      "name": "Wheat Flour (Atta)",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-022",
+      "name": "Maida",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-023",
+      "name": "Sooji / Rava",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-024",
+      "name": "Poha",
+      "unit": "KG"
+    },
+    {
+      "code": "RM-025",
+      "name": "Rice",
+      "unit": "KG"
+    }
+  ],
+  "finishedGoods": [
+    {
+      "sku": "FG-001",
+      "name": "Punjabi Samosa (30gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-002",
+      "name": "Punjabi Samosa (50gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-003",
+      "name": "Punjabi Samosa (70gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-004",
+      "name": "Punjabi Samosa (80gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-005",
+      "name": "Punjabi Samosa (90gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-006",
+      "name": "Cheese Corn Patti Samosa (30gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-007",
+      "name": "Aloo Muttar Patti Samosa (30gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-008",
+      "name": "Batata Vada (60gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-009",
+      "name": "Batata Vada Patty (60gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-010",
+      "name": "Mini Batata Vada (25gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-011",
+      "name": "Veg Cutlet (50gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-012",
+      "name": "Beet Root Cutlet (50gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-013",
+      "name": "Pharali Pattice (50gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-014",
+      "name": "Sabudana Vada (50gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-015",
+      "name": "Sabudana Khichadi (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-016",
+      "name": "Spring Roll (20gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-017",
+      "name": "Spring Roll Noodles (30gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-018",
+      "name": "Manchurian Balls",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-019",
+      "name": "Kothimbir Vadi (15gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-020",
+      "name": "Alu Vadi (15gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-021",
+      "name": "Misal (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-022",
+      "name": "Poha (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-023",
+      "name": "Upma (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-024",
+      "name": "Lachha Paratha (80gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-025",
+      "name": "Whole Wheat Lachha Paratha (80gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-026",
+      "name": "Malabar Paratha (80gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-027",
+      "name": "Triangle Paratha (45gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-028",
+      "name": "Aloo Paratha (100gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-029",
+      "name": "Aloo Paratha (150gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-030",
+      "name": "Mix Veg Paratha (100gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-031",
+      "name": "Paneer Paratha (100gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-032",
+      "name": "Paneer Paratha (150 gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-033",
+      "name": "Corn Cheese Paratha (100gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-034",
+      "name": "Methi paratha (80gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-035",
+      "name": "Chapati (40gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-036",
+      "name": "Bhature (80gm)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-037",
+      "name": "Paav Bhaji (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-038",
+      "name": "Chole Amritsari (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-039",
+      "name": "Rajma Masala (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-040",
+      "name": "Dal Tadka (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-041",
+      "name": "Dal Makhni (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-042",
+      "name": "Paneer Butter Masala - premium (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-043",
+      "name": "Paneer Tikka Masala - premium (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-044",
+      "name": "Dal Khichadi (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-045",
+      "name": "Jeera Rice (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-046",
+      "name": "Veg Pulav (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-047",
+      "name": "Veg Biryani (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-048",
+      "name": "Green Chutney - coconut (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-049",
+      "name": "Imli Chutney (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-050",
+      "name": "Pudina Chutney (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-051",
+      "name": "Gulab Jamun (30 gram - 16 pcs)",
+      "unit": "GM"
+    },
+    {
+      "sku": "FG-052",
+      "name": "Sheera (Suji Halwa) (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-053",
+      "name": "Gajar Halwa (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-054",
+      "name": "Moong Dal Halwa (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-055",
+      "name": "Phirni (1kg)",
+      "unit": "KG"
+    },
+    {
+      "sku": "FG-056",
+      "name": "Rabdi (1kg)",
+      "unit": "KG"
+    }
+  ]
+}
