@@ -181,7 +181,9 @@ export default function InwardFinishedGoodModal({
                 <span className="text-slate-400 ml-2 text-xs">(Batch: {selectedFg.batchNumber || '—'})</span>
               </div>
               <div className="font-mono text-emerald-400 font-bold text-xs">
-                Shelf Life: {selectedFg.shelfLifeDays} Days
+                {selectedFg.shelfLifeDays != null
+                  ? `Shelf Life: ${selectedFg.shelfLifeDays} Days`
+                  : 'Not yet produced'}
               </div>
             </div>
           )}

@@ -807,13 +807,15 @@ export default function Home() {
                               <tr key={fg.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-blue-400">{fg.sku}</td>
                                 <td className="p-3 font-semibold text-white">{fg.name}</td>
-                                <td className="p-3 font-mono text-slate-400">{fg.batchNumber}</td>
+                                <td className="p-3 font-mono text-slate-400">{fg.batchNumber || '—'}</td>
                                 <td className="p-3 text-right font-mono text-slate-300">{fg.quantityProduced}</td>
                                 <td className="p-3 text-right font-bold text-emerald-400">{fg.totalStock}</td>
                                 <td className="p-3">{fg.unit}</td>
-                                <td className="p-3">{new Date(fg.mfgDate).toISOString().split('T')[0]}</td>
-                                <td className="p-3">{new Date(fg.expiryDate).toISOString().split('T')[0]}</td>
-                                <td className="p-3 text-center font-bold text-emerald-400">{fg.shelfLifeDays} days</td>
+                                <td className="p-3">{fg.mfgDate ? new Date(fg.mfgDate).toISOString().split('T')[0] : '—'}</td>
+                                <td className="p-3">{fg.expiryDate ? new Date(fg.expiryDate).toISOString().split('T')[0] : '—'}</td>
+                                <td className="p-3 text-center font-bold text-emerald-400">
+                                  {fg.shelfLifeDays != null ? `${fg.shelfLifeDays} days` : '—'}
+                                </td>
                                 <td className="p-3">{fg.location || '—'}</td>
                                 <td className="p-3 text-center">
                                   <div className="flex items-center justify-center gap-2">

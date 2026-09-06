@@ -425,41 +425,46 @@ export async function getFinishedGoods(search?: string) {
   }
 }
 
+// Catalog registration for an FG SKU (Add Materials Hub).
+// Introduces the product to the system only — batch number, produced quantity and
+// MFG/expiry dates belong to a production run and stay empty until one is logged.
 export async function createFinishedGood(data: {
   sku: string;
   name: string;
-  batchNumber: string;
-  quantityProduced: number;
-  totalStock: number;
   unit: string;
-  mfgDate: string | Date;
-  expiryDate: string | Date;
+  batchNumber?: string;
+  quantityProduced?: number;
+  totalStock?: number;
+  mfgDate?: string | Date | null;
+  expiryDate?: string | Date | null;
   location?: string;
   status?: string;
 }) {
   try {
-    const existing = await prisma.finishedGood.findUnique({ where: { sku: data.sku } });
+    const skuClean = data.sku.trim().toUpperCase();
+    const existing = await prisma.finishedGood.findUnique({ where: { sku: skuClean } });
     if (existing) {
-      return { success: false, error: `Finished Good SKU "${data.sku}" already exists.` };
+      return { success: false, error: `Finished Good SKU "${skuClean}" already exists.` };
     }
 
-    const mfg = new Date(data.mfgDate);
-    const exp = new Date(data.expiryDate);
-    const shelfLifeDays = calculateShelfLifeDays(mfg, exp);
+    const mfg = data.mfgDate ? new Date(data.mfgDate) : null;
+    const exp = data.expiryDate ? new Date(data.expiryDate) : null;
+    const shelfLifeDays = mfg && exp ? calculateShelfLifeDays(mfg, exp) : null;
+    const totalStock = Number(data.totalStock ?? 0);
 
     const fg = await prisma.finishedGood.create({
       data: {
-        sku: data.sku.trim().toUpperCase(),
+        sku: skuClean,
         name: data.name.trim(),
-        batchNumber: data.batchNumber.trim(),
-        quantityProduced: Number(data.quantityProduced),
-        totalStock: Number(data.totalStock),
+        batchNumber: data.batchNumber?.trim() || '',
+        quantityProduced: Number(data.quantityProduced ?? 0),
+        totalStock,
         unit: data.unit.trim(),
         mfgDate: mfg,
         expiryDate: exp,
         shelfLifeDays,
         location: data.location?.trim() || 'Cold Store Zone A',
-        status: data.status || 'In Stock',
+        status: data.status || (totalStock > 0 ? 'In Stock' : 'Out of Stock'),
       },
     });
 
@@ -557,7 +562,8 @@ export async function updateFinishedGood(
         const exp = data.expiryDate ? new Date(data.expiryDate) : current.expiryDate;
         updateData.mfgDate = mfg;
         updateData.expiryDate = exp;
-        updateData.shelfLifeDays = calculateShelfLifeDays(mfg, exp);
+        // A SKU that has never been produced has no dates, and therefore no shelf life.
+        updateData.shelfLifeDays = mfg && exp ? calculateShelfLifeDays(mfg, exp) : null;
       }
     }
 
@@ -666,6 +672,15 @@ export async function createDispatch(data: {
         throw new Error(`Insufficient FG stock for ${fg.name}. Total stock available: ${fg.totalStock}, requested: ${dispatchQty}`);
       }
 
+      // A dispatch always ships a produced batch, so it must carry real dates.
+      const mfgDate = data.mfgDate ? new Date(data.mfgDate) : fg.mfgDate;
+      const expiryDate = data.expiryDate ? new Date(data.expiryDate) : fg.expiryDate;
+      if (!mfgDate || !expiryDate) {
+        throw new Error(
+          `Finished Good "${fg.sku}" has no manufacturing or expiry date yet. Log a production batch before dispatching it.`
+        );
+      }
+
       const newStock = fg.totalStock - dispatchQty;
       await tx.finishedGood.update({
         where: { id: fg.id },
@@ -683,8 +698,8 @@ export async function createDispatch(data: {
           dispatchQty,
           dispatchDate: data.dispatchDate ? new Date(data.dispatchDate) : new Date(),
           partyName: data.partyName.trim(),
-          mfgDate: data.mfgDate ? new Date(data.mfgDate) : fg.mfgDate,
-          expiryDate: data.expiryDate ? new Date(data.expiryDate) : fg.expiryDate,
+          mfgDate,
+          expiryDate,
           location: data.location || fg.location,
           coaStatus: data.coaStatus || 'Approved',
           remarks: null,

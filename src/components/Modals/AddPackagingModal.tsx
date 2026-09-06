@@ -33,19 +33,16 @@ export default function AddPackagingModal({
     code: '',
     name: '',
     brand: '',
-    stock: '',
     unit: 'Units',
     reorderLevel: '',
     maxStock: '',
     supplier: '',
-    batchNumber: '',
     location: 'PM Warehouse',
-    expiryDate: '',
   });
 
   if (!isOpen) return null;
 
-  const handleNumberChange = (field: 'stock' | 'reorderLevel' | 'maxStock', val: string) => {
+  const handleNumberChange = (field: 'reorderLevel' | 'maxStock', val: string) => {
     if (val === '') {
       setFormData((prev) => ({ ...prev, [field]: '' }));
       return;
@@ -57,44 +54,39 @@ export default function AddPackagingModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const stockNum = Number(formData.stock);
     const reorderNum = Number(formData.reorderLevel);
 
-    if (!formData.code || !formData.name || formData.stock === '' || stockNum < 0 || formData.reorderLevel === '' || reorderNum < 0) {
-      alert('Please fill in required fields with valid non-negative numbers (Code, Material Name, Stock, Reorder Level)');
+    if (!formData.code.trim() || !formData.name.trim() || formData.reorderLevel === '' || reorderNum < 0) {
+      alert('Please fill in required fields (Code, Material Name, Reorder Level with non-negative number)');
       return;
     }
 
     setLoading(true);
+    // Catalog registration only — stock arrives via "Log Inward PM", mirroring RM masters.
     const res = await createPackagingMaterial({
-      code: formData.code,
-      name: formData.name,
-      brand: formData.brand,
-      batchNumber: formData.batchNumber || `PB-${Date.now().toString().slice(-4)}`,
-      stock: stockNum,
+      code: formData.code.trim(),
+      name: formData.name.trim(),
+      brand: formData.brand.trim() || undefined,
+      stock: 0,
       unit: formData.unit || 'Units',
       reorderLevel: reorderNum,
       maxStock: formData.maxStock ? Number(formData.maxStock) : undefined,
-      supplier: formData.supplier,
-      location: formData.location,
-      expiryDate: formData.expiryDate || undefined,
+      supplier: formData.supplier.trim() || undefined,
+      location: formData.location.trim() || undefined,
     });
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ New Packaging Material "${formData.name}" added to catalog successfully!`);
+      alert(`✅ New Packaging Material "${formData.name}" registered in the catalog successfully!`);
       setFormData({
         code: '',
         name: '',
         brand: '',
-        stock: '',
         unit: 'Units',
         reorderLevel: '',
         maxStock: '',
         supplier: '',
-        batchNumber: '',
         location: 'PM Warehouse',
-        expiryDate: '',
       });
       onSuccess();
       onClose();
@@ -114,10 +106,10 @@ export default function AddPackagingModal({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
-                Add Brand New Packaging (Catalog PM)
+                Add Brand New Packaging (Master Item)
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                Register jars, bottles, cartons or caps in master catalog
+                Register a new packaging catalog SKU in the system (without logging stock)
               </p>
             </div>
           </div>
@@ -136,7 +128,7 @@ export default function AddPackagingModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Code *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono transition-all"
-                placeholder="PM009"
+                placeholder="e.g. PM009"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 required
@@ -146,41 +138,28 @@ export default function AddPackagingModal({
               <label className="text-xs font-semibold text-slate-300 block mb-1">Material Name *</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="500g Glass Jars"
+                placeholder="e.g. 500g Glass Jars"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
             <div className="min-w-0 sm:col-span-2 md:col-span-1">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name / Type</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Brand Name</label>
               <input
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="Hindusthan Glass"
+                placeholder="e.g. Hindusthan Glass"
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Current Stock Qty *</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-bold text-blue-400"
-                placeholder="5000"
-                value={formData.stock}
-                onChange={(e) => handleNumberChange('stock', e.target.value)}
-                required
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
               <select
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none font-medium transition-all"
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
               >
@@ -191,22 +170,19 @@ export default function AddPackagingModal({
                 ))}
               </select>
             </div>
-            <div className="min-w-0 sm:col-span-2 md:col-span-1">
+            <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Reorder Level *</label>
               <input
                 type="number"
                 min="0"
                 step="any"
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="1000"
+                placeholder="e.g. 1000"
                 value={formData.reorderLevel}
                 onChange={(e) => handleNumberChange('reorderLevel', e.target.value)}
                 required
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Max Stock Level</label>
               <input
@@ -214,34 +190,25 @@ export default function AddPackagingModal({
                 min="0"
                 step="any"
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="20000"
+                placeholder="e.g. 20000"
                 value={formData.maxStock}
                 onChange={(e) => handleNumberChange('maxStock', e.target.value)}
-              />
-            </div>
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Supplier Name</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="PackTech Solutions"
-                value={formData.supplier}
-                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-              />
-            </div>
-            <div className="min-w-0 sm:col-span-2 md:col-span-1">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Batch Number</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono transition-all"
-                placeholder="PB-2026-01"
-                value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Default Supplier Name</label>
+              <input
+                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="e.g. PackTech Solutions"
+                value={formData.supplier}
+                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Default Storage Location</label>
               <select
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 value={formData.location}
@@ -253,15 +220,6 @@ export default function AddPackagingModal({
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date</label>
-              <input
-                type="date"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-              />
             </div>
           </div>
 
@@ -282,10 +240,10 @@ export default function AddPackagingModal({
               {loading ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Creating...</span>
+                  <span>Registering...</span>
                 </>
               ) : (
-                'Create Master Material'
+                'Register Master Material'
               )}
             </button>
           </div>

@@ -162,13 +162,16 @@ model FinishedGood {
   id               String     @id @default(cuid())
   sku              String     @unique // FG Code / SKU
   name             String
-  batchNumber      String
+  // Batch identity and dates belong to a PRODUCTION RUN, not to the catalog SKU.
+  // "Add Finished Good" only introduces the SKU to the system; these stay empty
+  // until a batch is logged via inwardFinishedGood / createProductionLog.
+  batchNumber      String     @default("")
   quantityProduced Float      @default(0)
   totalStock       Float      @default(0)
   unit             String     @default("KG")
-  mfgDate          DateTime
-  expiryDate       DateTime
-  shelfLifeDays    Int        // Auto-calculated: Expiry - MFG in days
+  mfgDate          DateTime?
+  expiryDate       DateTime?
+  shelfLifeDays    Int?       // Auto-calculated: Expiry - MFG in days
   location         String?
   status           String     @default("In Stock")
   isArchived       Boolean    @default(false) // Soft-deleted: hidden from lists & blocked for new entries, history retained

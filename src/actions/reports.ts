@@ -15,10 +15,12 @@ export async function getReportsData() {
     // Aging calculation for FG
     const today = new Date();
     const fgAging = finishedGoods
+      // Catalog SKUs that have never been produced carry no dates, so they cannot age.
+      .filter((f) => f.totalStock > 0 && f.mfgDate && f.expiryDate)
       .map((f) => {
-        const diffMs = new Date(f.expiryDate).getTime() - today.getTime();
+        const diffMs = new Date(f.expiryDate!).getTime() - today.getTime();
         const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-        const ageMs = today.getTime() - new Date(f.mfgDate).getTime();
+        const ageMs = today.getTime() - new Date(f.mfgDate!).getTime();
         const ageDays = Math.ceil(ageMs / (1000 * 60 * 60 * 24));
         return {
           id: f.id,
@@ -34,7 +36,6 @@ export async function getReportsData() {
           daysLeft,
         };
       })
-      .filter((f) => f.stock > 0)
       .sort((a, b) => a.daysLeft - b.daysLeft);
 
     return {

@@ -33,64 +33,37 @@ export default function AddFinishedGoodModal({
   const [formData, setFormData] = useState({
     sku: '',
     name: '',
-    batchNumber: '',
-    quantityProduced: '',
     unit: 'KG',
-    mfgDate: new Date().toISOString().split('T')[0],
-    expiryDate: '',
     location: 'Cold Store Zone A',
   });
 
   if (!isOpen) return null;
 
-  const handleQtyChange = (val: string) => {
-    if (val === '') {
-      setFormData({ ...formData, quantityProduced: '' });
-      return;
-    }
-    const num = Number(val);
-    if (num < 0 || isNaN(num)) return;
-    setFormData({ ...formData, quantityProduced: val });
-  };
-
-  // Auto-calculate shelf life
-  const mfgTime = formData.mfgDate ? new Date(formData.mfgDate).getTime() : 0;
-  const expTime = formData.expiryDate ? new Date(formData.expiryDate).getTime() : 0;
-  const computedShelfLife = mfgTime && expTime ? Math.max(0, Math.ceil((expTime - mfgTime) / (1000 * 60 * 60 * 24))) : 0;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const qtyNum = Number(formData.quantityProduced);
-    if (!formData.sku || !formData.name || !formData.batchNumber || formData.quantityProduced === '' || qtyNum <= 0 || !formData.expiryDate) {
-      alert('Please fill in required fields with a valid non-negative Quantity (> 0)');
+
+    if (!formData.sku.trim() || !formData.name.trim()) {
+      alert('Please fill in required fields (Product SKU, Product Name)');
       return;
     }
 
     setLoading(true);
-    const mfg = formData.mfgDate || new Date().toISOString().split('T')[0];
+    // Catalog registration only — batch number, quantity and MFG/expiry dates are
+    // captured per production run in "Log FG Batch Stock".
     const res = await createFinishedGood({
-      sku: formData.sku,
-      name: formData.name,
-      batchNumber: formData.batchNumber,
-      quantityProduced: qtyNum,
-      totalStock: qtyNum,
+      sku: formData.sku.trim(),
+      name: formData.name.trim(),
       unit: formData.unit || 'KG',
-      mfgDate: mfg,
-      expiryDate: formData.expiryDate,
       location: formData.location,
     });
     setLoading(false);
 
     if (res.success) {
-      alert(`✅ New Finished Good "${formData.name}" added to catalog successfully!`);
+      alert(`✅ New Finished Good "${formData.name}" registered in the catalog successfully!`);
       setFormData({
         sku: '',
         name: '',
-        batchNumber: '',
-        quantityProduced: '',
         unit: 'KG',
-        mfgDate: new Date().toISOString().split('T')[0],
-        expiryDate: '',
         location: 'Cold Store Zone A',
       });
       onSuccess();
@@ -114,7 +87,7 @@ export default function AddFinishedGoodModal({
                 Add Brand New Finished Good (Catalog SKU)
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                Define a new manufactured food product in the master catalog
+                Introduce a manufactured product to the system (batch &amp; dates are logged at production)
               </p>
             </div>
           </div>
@@ -151,32 +124,7 @@ export default function AddFinishedGoodModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Initial Batch Number *</label>
-              <input
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none font-mono transition-all"
-                placeholder="e.g. FG-MNG-9901"
-                value={formData.batchNumber}
-                onChange={(e) => setFormData({ ...formData, batchNumber: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Initial Quantity Produced *</label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-emerald-400 transition-all"
-                placeholder="e.g. 1000"
-                value={formData.quantityProduced}
-                onChange={(e) => handleQtyChange(e.target.value)}
-                required
-              />
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="min-w-0">
               <label className="text-xs font-semibold text-slate-300 block mb-1">Unit *</label>
               <select
@@ -191,52 +139,21 @@ export default function AddFinishedGoodModal({
                 ))}
               </select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">MFG Date *</label>
-              <input
-                type="date"
+              <label className="text-xs font-semibold text-slate-300 block mb-1">Default Storage Location</label>
+              <select
                 className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                value={formData.mfgDate}
-                onChange={(e) => setFormData({ ...formData, mfgDate: e.target.value })}
-                required
-              />
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              >
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
             </div>
-
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Expiry Date *</label>
-              <input
-                type="date"
-                className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                value={formData.expiryDate}
-                onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="min-w-0">
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Calculated Shelf Life</label>
-              <div className="w-full text-xs sm:text-sm p-2.5 bg-[#162440]/60 border border-[#2A3F66] rounded-lg text-emerald-400 font-bold flex items-center h-[38px] sm:h-[42px]">
-                {computedShelfLife > 0 ? `${computedShelfLife} Days` : '—'}
-              </div>
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Storage Location</label>
-            <select
-              className="w-full text-xs sm:text-sm p-2.5 bg-[#162440] border border-[#2A3F66] rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            >
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id} className="bg-[#162440] text-white">
-                  {loc.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Action Buttons */}
