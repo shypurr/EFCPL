@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import PanelSearch from '@/components/PanelSearch';
 import Sidebar from '@/components/Sidebar';
 import MobileNav from '@/components/MobileNav';
 import Topbar from '@/components/Topbar';
@@ -55,7 +56,6 @@ import {
   Truck,
   ShieldCheck,
   Users,
-  Search,
   Plus,
   Trash2,
   Edit,
@@ -63,7 +63,6 @@ import {
   CheckCircle2,
   Layers,
   ArrowDownRight,
-  X,
   FileText,
   ExternalLink,
 } from 'lucide-react';
@@ -145,14 +144,14 @@ export default function Home() {
         getUsers(),
         getRoles(),
         getPermissions(),
-        getRawMaterials(searchQuery),
+        getRawMaterials(),
         getRawMaterialMasters(),
-        getPackagingMaterials(searchQuery),
-        getRMIssues(searchQuery),
-        getProductionLogs(searchQuery),
-        getPackagingIssues(searchQuery),
-        getFinishedGoods(searchQuery),
-        getDispatches(searchQuery),
+        getPackagingMaterials(),
+        getRMIssues(),
+        getProductionLogs(),
+        getPackagingIssues(),
+        getFinishedGoods(),
+        getDispatches(),
         getPurchaseOrderSuggestions(),
         getReportsData(),
         getCoaLinksByBatch(),
@@ -179,16 +178,54 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
+  // Search is scoped to the tab you are on, so leaving a tab clears its query.
+  useEffect(() => {
+    setSearchQuery('');
+  }, [activePanel]);
+
   // Compute live alerts count
   const lowRmCount = rawMaterials.filter((r) => r.stock <= r.reorderLevel).length;
   const lowPmCount = packagedMaterials.filter((p) => p.stock <= p.reorderLevel).length;
   const totalAlertsCount = lowRmCount + lowPmCount;
+
+  // Search filters the rows already in memory — no database round-trip per keystroke.
+  const q = searchQuery.trim().toLowerCase();
+  const matches = useCallback(
+    (...fields: unknown[]) =>
+      !q || fields.some((f) => f != null && String(f).toLowerCase().includes(q)),
+    [q]
+  );
+
+  const filteredRawMaterials = useMemo(
+    () => rawMaterials.filter((r) => matches(r.code, r.name, r.brand, r.batchNumber, r.supplier, r.location)),
+    [rawMaterials, matches]
+  );
+  const filteredPackagedMaterials = useMemo(
+    () => packagedMaterials.filter((p) => matches(p.code, p.name, p.brand, p.batchNumber, p.supplier, p.location)),
+    [packagedMaterials, matches]
+  );
+  const filteredRmIssues = useMemo(
+    () => rmIssues.filter((i) => matches(i.rmCode, i.materialName, i.batchNumber, i.issueFor)),
+    [rmIssues, matches]
+  );
+  const filteredProductionLogs = useMemo(
+    () => productionLogs.filter((l) => matches(l.fgCode, l.fgName, l.operator, l.batchNumber)),
+    [productionLogs, matches]
+  );
+  const filteredPackagingIssues = useMemo(
+    () => packagingIssues.filter((i) => matches(i.pmCode, i.pmName, i.issueFor)),
+    [packagingIssues, matches]
+  );
+  const filteredDispatches = useMemo(
+    () => dispatches.filter((d) => matches(d.skuCode, d.productName, d.partyName, d.batchCode, d.location)),
+    [dispatches, matches]
+  );
 
   // The Finished Goods panel is a PRODUCTION register, not the SKU catalogue.
   // An SKU only appears once a batch has actually been logged against it — every
@@ -196,6 +233,10 @@ export default function Home() {
   const loggedFinishedGoods = useMemo(
     () => finishedGoods.filter((fg) => (fg.batchNumber || '').trim() !== ''),
     [finishedGoods]
+  );
+  const filteredFinishedGoods = useMemo(
+    () => loggedFinishedGoods.filter((fg) => matches(fg.sku, fg.name, fg.batchNumber, fg.location)),
+    [loggedFinishedGoods, matches]
   );
 
   // Delete Actions
@@ -321,37 +362,6 @@ export default function Home() {
 
         {/* MAIN BODY */}
         <main className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 flex-1 w-full max-w-7xl mx-auto">
-          {/* SEARCH & FILTER BAR */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0D1B2E] border border-[#1E2F4A] p-3 rounded-xl shadow-xs">
-            <div className="relative flex-1 min-w-0">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                className="w-full text-xs sm:text-sm pl-9 pr-8 py-2 bg-[#162440] border border-[#2A3F66] rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-[#1D9E75] outline-none transition-all"
-                placeholder="Search materials, batch codes, SKUs, or locations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={loadData}
-                className="px-3 py-2 text-xs font-semibold text-slate-300 bg-[#162440] hover:bg-[#1E2F4A] border border-[#2A3F66] rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Sync Data</span>
-              </button>
-            </div>
-          </div>
 
           {dbError && (
             <div className="bg-red-500/10 border border-red-500/30 p-3 sm:p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-red-300">
@@ -398,6 +408,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search raw materials by name, code, batch code or location..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -420,14 +436,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {rawMaterials.length === 0 ? (
+                          {filteredRawMaterials.length === 0 ? (
                             <tr>
                               <td colSpan={14} className="p-8 text-center text-slate-500">
                                 No raw materials found matching search query.
                               </td>
                             </tr>
                           ) : (
-                            rawMaterials.map((rm) => (
+                            filteredRawMaterials.map((rm) => (
                               <tr key={rm.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-emerald-400">{rm.code}</td>
                                 <td className="p-3 font-semibold text-white">{rm.name}</td>
@@ -506,6 +522,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search packaging materials by name, code, batch code or supplier..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -527,14 +549,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {packagedMaterials.length === 0 ? (
+                          {filteredPackagedMaterials.length === 0 ? (
                             <tr>
                               <td colSpan={13} className="p-8 text-center text-slate-500">
                                 No packaging materials found matching search query.
                               </td>
                             </tr>
                           ) : (
-                            packagedMaterials.map((pm) => (
+                            filteredPackagedMaterials.map((pm) => (
                               <tr key={pm.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-blue-400">{pm.code}</td>
                                 <td className="p-3 font-semibold text-white">{pm.name}</td>
@@ -610,6 +632,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search RM issues by material, code, batch code or department..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -627,14 +655,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {rmIssues.length === 0 ? (
+                          {filteredRmIssues.length === 0 ? (
                             <tr>
                               <td colSpan={9} className="p-8 text-center text-slate-500">
                                 No RM Issue entries logged yet.
                               </td>
                             </tr>
                           ) : (
-                            rmIssues.map((issue) => (
+                            filteredRmIssues.map((issue) => (
                               <tr key={issue.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-emerald-400">{issue.rmCode || '—'}</td>
                                 <td className="p-3 font-semibold text-white">{issue.materialName}</td>
@@ -696,6 +724,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search production runs by product, code or batch code..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -712,14 +746,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {productionLogs.length === 0 ? (
+                          {filteredProductionLogs.length === 0 ? (
                             <tr>
                               <td colSpan={8} className="p-8 text-center text-slate-500">
                                 No production runs recorded yet.
                               </td>
                             </tr>
                           ) : (
-                            productionLogs.map((log) => (
+                            filteredProductionLogs.map((log) => (
                               <tr key={log.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-amber-400">{log.fgCode}</td>
                                 <td className="p-3 font-semibold text-white">{log.fgName}</td>
@@ -776,6 +810,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search packaging issues by material, code or linked FG..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -791,14 +831,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {packagingIssues.length === 0 ? (
+                          {filteredPackagingIssues.length === 0 ? (
                             <tr>
                               <td colSpan={7} className="p-8 text-center text-slate-500">
                                 No Packaging Issue entries logged yet.
                               </td>
                             </tr>
                           ) : (
-                            packagingIssues.map((issue) => (
+                            filteredPackagingIssues.map((issue) => (
                               <tr key={issue.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-purple-400">{issue.pmCode || '—'}</td>
                                 <td className="p-3 font-semibold text-white">{issue.pmName}</td>
@@ -854,6 +894,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search finished goods by SKU, product name or batch code..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -873,14 +919,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {loggedFinishedGoods.length === 0 ? (
+                          {filteredFinishedGoods.length === 0 ? (
                             <tr>
                               <td colSpan={11} className="p-8 text-center text-slate-500">
                                 No production logged yet. Use &quot;Log FG Batch Stock&quot; to record a produced batch.
                               </td>
                             </tr>
                           ) : (
-                            loggedFinishedGoods.map((fg) => (
+                            filteredFinishedGoods.map((fg) => (
                               <tr key={fg.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-blue-400">{fg.sku}</td>
                                 <td className="p-3 font-semibold text-white">{fg.name}</td>
@@ -942,6 +988,12 @@ export default function Home() {
                     </button>
                   </div>
 
+                  <PanelSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search dispatches by SKU, product, batch code or party name..."
+                  />
+
                   <div className="bg-[#0D1B2E] border border-[#1E2F4A] rounded-xl overflow-hidden shadow-xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-xs sm:text-sm">
@@ -961,14 +1013,14 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#1E2F4A] text-slate-300">
-                          {dispatches.length === 0 ? (
+                          {filteredDispatches.length === 0 ? (
                             <tr>
                               <td colSpan={11} className="p-8 text-center text-slate-500">
                                 No dispatch entries logged yet.
                               </td>
                             </tr>
                           ) : (
-                            dispatches.map((disp) => (
+                            filteredDispatches.map((disp) => (
                               <tr key={disp.id} className="hover:bg-[#162440]/50 transition-all">
                                 <td className="p-3 font-mono font-bold text-indigo-400">{disp.skuCode || '—'}</td>
                                 <td className="p-3 font-semibold text-white">{disp.productName}</td>
@@ -1217,96 +1269,6 @@ export default function Home() {
               {/* ======================================================== */}
               {activePanel === 'dashboard' && (
                 <div className="space-y-6">
-                  {/* Pipeline Quick Access Stats */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
-                    <div
-                      onClick={() => setActivePanel('raw-materials')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <Wheat className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> RM Items
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{rawMaterials.length}</div>
-                      <div className="text-[10px] text-emerald-400 font-mono truncate">
-                        {lowRmCount > 0 ? `${lowRmCount} Low Stock` : 'Optimal'}
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActivePanel('packaged-materials')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <Boxes className="w-3.5 h-3.5 text-blue-400 shrink-0" /> PM Items
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{packagedMaterials.length}</div>
-                      <div className="text-[10px] text-blue-400 font-mono truncate">
-                        {lowPmCount > 0 ? `${lowPmCount} Low Stock` : 'Optimal'}
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActivePanel('op-rm-issue')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-emerald-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <RefreshCw className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> RM Issues
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{rmIssues.length}</div>
-                      <div className="text-[10px] text-slate-400 truncate">Total Issued</div>
-                    </div>
-
-                    <div
-                      onClick={() => setActivePanel('op-production')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-amber-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <Factory className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Production
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{productionLogs.length}</div>
-                      <div className="text-[10px] text-amber-400 font-mono truncate">
-                        {productionLogs.reduce((acc, p) => acc + (p.totalOutput || 0), 0)} Output
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActivePanel('op-packaging-issue')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-purple-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <Box className="w-3.5 h-3.5 text-purple-400 shrink-0" /> PM Issues
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{packagingIssues.length}</div>
-                      <div className="text-[10px] text-slate-400 truncate">Packaging Out</div>
-                    </div>
-
-                    <div
-                      onClick={() => setActivePanel('op-finished-goods')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-blue-400 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <PackageCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" /> Finished Goods
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{loggedFinishedGoods.length}</div>
-                      <div className="text-[10px] text-emerald-400 font-mono truncate">
-                        {loggedFinishedGoods.reduce((acc, f) => acc + (f.totalStock || 0), 0)} Units
-                      </div>
-                    </div>
-
-                    <div
-                      onClick={() => setActivePanel('op-dispatch')}
-                      className="bg-[#0D1B2E] border border-[#1E2F4A] hover:border-indigo-500 p-3 sm:p-4 rounded-xl cursor-pointer transition-all space-y-1 col-span-2 sm:col-span-1"
-                    >
-                      <div className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 truncate">
-                        <Truck className="w-3.5 h-3.5 text-indigo-400 shrink-0" /> Dispatches
-                      </div>
-                      <div className="text-lg sm:text-xl font-bold text-white">{dispatches.length}</div>
-                      <div className="text-[10px] text-indigo-400 font-mono truncate">
-                        {dispatches.reduce((acc, d) => acc + (d.dispatchQty || 0), 0)} Out
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Production & Dispatch Overview */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Recent Production Logs */}
